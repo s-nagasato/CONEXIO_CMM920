@@ -1,10 +1,12 @@
 /***
 
 	libconexio_CMM920_wrap.c - conexio_CMM920_Wrapper functions library
-	Copyright (C) Syunsuke Okamoto.<okamoto@contec.jp>
+	Copyright (C) Syunsuke Okamoto.<okamoto@contec.jp>.
 
 	This Library is proprietary Library. 
 	Because, the Specification of conexio CMM920 is confidential.
+
+	update 2015.01.08 (1) Fixed 100kBps values of conexio_cmm920_set_wireless function.
 
 ***/
 
@@ -41,7 +43,7 @@ int conexio_cmm920_set_wireless(int iBitrate, BYTE channel, BYTE power, char sen
 		bBitrate = CONEXIO_CMM920_SET_WIRELESS_BITRATE_50KBPS;
 		break;
 	case 100000:
-		bBitrate = CONEXIO_CMM920_SET_WIRELESS_BITRATE_50KBPS;
+		bBitrate = CONEXIO_CMM920_SET_WIRELESS_BITRATE_100KBPS;
 		break;
 	default:
 		return 1;
@@ -92,14 +94,14 @@ int conexio_cmm920_set_wireless_default(void)
 {
 	return conexio_cmm920_set_wireless(
 			100000,	//100kbps
-			60,	//60ch
+			60,		//60ch
 			CONEXIO_CMM920_SET_WIRELESS_POWER_01MW,
 			-85,	//-85 dbm
-			-95,		// -95 dbm
-			130,			// 130(msec)
+			-95,	// -95 dbm
+			130,	// 130(msec)
 			6,
-			4,					// ACK 4回
-			100					// 100(msec)
+			4,		// ACK 4回
+			100		// 100(msec)
 	);
 }
 

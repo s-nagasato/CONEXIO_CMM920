@@ -154,26 +154,27 @@ int main(int argc, char **argv)
 	while(1){
 
 		// 電文受送信
-		do{
-			memset(&cRecv[0], 0x00, 512 * sizeof(char) );
-			iRet = conexio_cmm920_data_recv(
-					&cRecv[0],
-					NULL,
-					CONEXIO_CMM920_HOP_SINGLE,
-					NULL,
-					NULL
-			);
-			usleep(iWait * 1000);
-		}while( iRet );
-
-
-		conexio_cmm920_data_send(
-			&cRecv[0],
-			36,
-			CONEXIO_CMM920_HOP_SINGLE,
-			CONEXIO_CMM920_SENDDATA_MODE_NOACK_NORESP,
-			NULL
+		memset(&cRecv[0], 0x00, 512 * sizeof(char) );
+		iRet = conexio_cmm920_data_recv(
+				&cRecv[0],
+				NULL,
+				CONEXIO_CMM920_HOP_SINGLE,
+				NULL,
+				NULL
 		);
+		usleep(iWait * 1000);
+
+		if(!iRet){
+			conexio_cmm920_data_send(
+				&cRecv[0],
+				36,
+				CONEXIO_CMM920_HOP_SINGLE,
+				CONEXIO_CMM920_SENDDATA_MODE_NOACK_NORESP,
+				NULL
+			);
+		}
+
+		
 		usleep(iWait * 1000);
 	}
 

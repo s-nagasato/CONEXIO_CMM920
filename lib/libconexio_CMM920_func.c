@@ -1,11 +1,15 @@
 /***
 
 	libconexio_CMM920_func.c - conexio_CMM920_functions library
+	
 	Copyright (C) 2015 Tomoyuki Niimi, Syunsuke Okamoto.<okamoto@contec.jp>
 
 	This Library is proprietary Library. 
 	Because, the Specification of conexio CMM920 is confidential.
 
+	update 2015.01.08 (1) Fixed memory leak error.
+ 	                  (2) Fixed Initialize value error.
+                      (3) Fixed return length of RecvCommandAck function.
 ***/
 
 #include <stdio.h>
@@ -142,7 +146,7 @@ int conexio_cmm920_exit()
 	return 0;
 }
 
-// 繝ｪ繧ｻ繝�繝郁ｦ∵ｱ�
+// reset
 int conexio_cmm920_reset()
 {
 	int iRet;
@@ -166,7 +170,7 @@ int conexio_cmm920_reset()
 
 }
 
-// 險ｭ螳壹Δ繝ｼ繝芽ｦ∵ｱ�
+// mode
 int conexio_cmm920_mode(BYTE isWrite , int *code)
 {
 	int iRet;
@@ -221,7 +225,7 @@ int conexio_cmm920_mode(BYTE isWrite , int *code)
 
 }
 
-// 繧｢繝峨Ξ繧ｹ險ｭ螳夊ｦ∵ｱ�
+// Address
 int conexio_cmm920_address(BYTE isWrite, unsigned short *panId, BYTE Addr[], unsigned short *shortAddr )
 {
 	int iRet;
@@ -278,7 +282,7 @@ int conexio_cmm920_address(BYTE isWrite, unsigned short *panId, BYTE Addr[], uns
 
 }
 
-// 辟｡邱夊ｨｭ螳夊ｦ∵ｱゑｼ�**mW縲�**:ch縲�***kbps縲�***ﾎｼs)
+// Wireless ( bitrate ***kbps, channel **ch, Power **mW )
 int conexio_cmm920_wireless(BYTE isWrite, BYTE *bitrate, BYTE *channel, BYTE *power, char *sendSenceLvl,
 	 char *recvSenceLvl, unsigned short *sendSenceTim, BYTE *sendSenceNum, BYTE *ackRetryNum, unsigned short *ackWaitTim)
 {
@@ -359,7 +363,7 @@ int conexio_cmm920_wireless(BYTE isWrite, BYTE *bitrate, BYTE *channel, BYTE *po
 	return iRet;
 }
 
-// 蠢懃ｭ泌ｾ�縺｡繧ｿ繧､繝櫁ｨｭ螳夊ｦ∵ｱ�
+// timer 
 int conexio_cmm920_timer( BYTE isWrite, unsigned short *tim )
 {
 
@@ -408,7 +412,7 @@ int conexio_cmm920_timer( BYTE isWrite, unsigned short *tim )
 	return iRet;
 }
 
-// 閾ｪ蜍柊CK蠢懃ｭ斐ヵ繝ｬ繝ｼ繝�險ｭ螳夊ｦ∵ｱ�
+// Auto Ack Frame
 int conexio_cmm920_auto_ack_frame( BYTE isWrite, unsigned short *phr, unsigned char *fc_upper )
 {
 
@@ -459,7 +463,7 @@ int conexio_cmm920_auto_ack_frame( BYTE isWrite, unsigned short *phr, unsigned c
 
 }
 
-// 繧｢繝ｳ繝�繝願ｨｭ螳夊ｦ∵ｱ�_繧｢繝ｳ繝�繝願ｨｭ螳�
+// Antenna mode (Internal or External )
 int conexio_cmm920_antenna( BYTE isWrite, BYTE *antennaMode )
 {
 	int iRet;
@@ -554,7 +558,7 @@ int conexio_cmm920_version(int *ver, int *rev)
 	return iRet;
 }
 
-// LSI險ｭ螳夊ｦ∵ｱ�
+// LSI set function ( basic )
 int conexio_cmm920_lsi(unsigned long lsi_addr, int isWrite, unsigned short *value)
 {
 	int iRet;
@@ -702,7 +706,7 @@ int conexio_cmm920_data_recv(BYTE buf[], int *size, int hop, int *r_channel, int
 	return RecvTelegram(buf, size, hop , r_channel, rssi );
 }
 
-/// 920MHz蛻ｶ蠕｡繧ｳ繝槭Φ繝峨�ｮ騾∝女菫｡髢｢謨ｰ
+/// 920MHz Send Run-mode Packet function
 
 int SendTelegram(BYTE buf[], int size, int hop, int send_mode){
 
@@ -762,14 +766,17 @@ int RecvTelegramSingleHop(BYTE buf[], int *size , int *r_channel, int *rssi )
 	if( size != NULL && *size != 0 ){
 		pktSize = *size + head_size + foot_size;
 		pktBuf = (BYTE*)malloc( pktSize * sizeof(BYTE) );
+		memset(pktBuf, 0, ( pktSize * sizeof(BYTE) ));	// 2015.01.08 (2)
 	}else{
 		pktSize = 0;
 		pktBuf = (BYTE*)malloc( ( 512 + head_size + foot_size ) * sizeof(BYTE) );
+		memset(pktBuf, 0, ( 512 + head_size + foot_size ) * sizeof(BYTE) ); // 2015.01.08 (2)	
 	}
 	// Data Received
 	iRet = RecvCommandAck(pktBuf, &pktSize, CONEXIO_CMM920_MODE_RUN, CONEXIO_CMM920_SENDDATA);
 
 	if( iRet ){
+		free(pktBuf); // 2015.01.08 (1)
 		return iRet;
 	}
 
@@ -781,12 +788,16 @@ int RecvTelegramSingleHop(BYTE buf[], int *size , int *r_channel, int *rssi )
 
 		d_size = pktBuf[3] * 256 + pktBuf[4];
 
-
 		for( i = 0; i < d_size ; i ++ ){
 			buf[i] = pktBuf[head_size + i];
 		}
 		//crc, rx_rssi, rx_ant
+		
+		if( size != NULL ) *size = d_size; // 2015.01.08 (3)
+		
 	}
+	
+	free(pktBuf);// 2015.01.08 (1)
 	return 0;
 }
 
@@ -835,7 +846,6 @@ int SendCommand(BYTE buf[], int size, BYTE mode, BYTE command )
 
 int pktChkBYTEArray(PCONEXIO920PACKET pac, BYTE *array, int size )
 {
-
 	long cnt;
 	int HeadSize, FootSize, pktSizeOffset;
 
@@ -903,12 +913,17 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 		DbgPrint("<RecvCommandAck> Memory Null Allocate.\n");
 		return -1;
 	}
+	
+	memset(head_data, 0, sizeof(head_data)); // 2015.01.08 (2)
+
 	//size get
 	Serial_GetString(iPort, &head_data[0], 4 * sizeof(BYTE));
 
 	d_size = (head_data[2] * 256 + head_data[3]);
 	if( d_size < 5 ){
 		DbgPrint("<RecvCommandAck> Non Data Length \n");
+		freeConexioCMM920_packet(pac);// 2015.01.08 (1)
+//		free(pac);
 		return 0;
 	}
 	d_size -= 5; // ヘッダサイズを引いて実データサイズを求める
@@ -916,7 +931,8 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 	if(pac->data == NULL)
 	{
 		DbgPrint("<RecvCommandAck> Memory allocation error\n");
-		free(pac);
+		freeConexioCMM920_packet(pac);// 2015.01.08 (1)
+//		free(pac);
 		return -2;
 	}
 	array = pktGetBYTEArray(pac, d_size, &length);
@@ -950,13 +966,22 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 		return -4;
 	}
 
-	if( size != NULL && *size != 0 ){
+	if(size != NULL) DbgPrint("<RecvCommandAck> size not NULL\n");
+	if(*size != 0) DbgPrint("<RecvCommandAck> *size not 0\n");
+
+	if( (size != NULL) && (*size != 0) ){
 		iRet = pktChkBYTEArray( pac, array , *size);
 	}else{
 		iRet = pktChkBYTEArray( pac, array , d_size);
 	}
 	if( iRet ){
 		DbgPrint("<RecvCommandAck> pkt Chk Error\n");
+		// 2015.01.08 (2) start
+		free(array);
+		freeConexioCMM920_packet(pac);
+		//free(pac->data);
+		//free(pac);
+		// 2015.01.08 (2) end
 		return -5;
 		
 	}
@@ -965,6 +990,11 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 	for( i = 0; i < d_size; i ++ ){
 		buf[i] = pac->data[i];
 	}
+	// 2015.01.08 (2) start
+	freeConexioCMM920_packet(pac);
+	//free(pac->data);
+	//free(pac);
+	// 2015.01.08 (2) end
 
 	if(size != NULL)	*size = d_size;
 
@@ -972,182 +1002,14 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 
 }
 
-// 髮ｻ譁�蜿嶺ｿ｡髢｢謨ｰ
-/*int RecvTelegram(int size)
-{
-	int GetLength;
-	int RecvLength;
-	int Wait = 1;
-	int i;
-	BYTE Stmp[size];
-	BYTE Rtmp[size];
-	BYTE *cRecv;
-	PCONEXIO920PACKET pac;
-	int ret = 0;
-	int cnt = 0;
-	BYTE ch;
-	BYTE RSSI;
-
-	cRecv = pktGetBYTEcRecvSend(size);
-
-	// 髮ｻ譁�繧貞女菫｡
-	Serial_GetString(iPort, cRecv, RecvLength * sizeof(BYTE));
-
-	// 蜿嶺ｿ｡繝√Ε繝阪Ν蜿門ｾ�
-	ch = cRecv[9];
-	RecvChannelDisplay(ch);
-
-	// 蜿嶺ｿ｡諢溷ｺｦ蜿門ｾ�
-	RSSI = cRecv[10];
-	RecvSensitivityDisplay(RSSI);
-
-	// 蜿嶺ｿ｡邨先棡陦ｨ遉ｺ
-	printf("Recv Telegram = ");
-
-	for(i = 13; i < (size + 13); i++)
-	{
-		Rtmp[i -13] = cRecv[i];
-		printf("%02X", Rtmp[i -13]);
-	}
-
-	printf("\n");
-
-	// malloc縺ｧ遒ｺ菫昴＠縺溘Γ繝｢繝ｪ縺ｯ蠢�縺夊ｧ｣謾ｾ縺吶ｋ
-	free(cRecv);
-	return ret;
-}
-*/
-/*
-// 髮ｻ譁�騾∝女菫｡髢｢謨ｰ
-int SendRecvTelegram(BYTE buf[], int size, BYTE MODE, BYTE COMMAND)
-{
-	BYTE *Array;
-	int GetLength;
-	int RecvLength;
-	int Wait = 1;
-	int i;
-	BYTE Stmp[size];
-	BYTE Rtmp[size];
-	BYTE *cRecv;
-	PCONEXIO920PACKET pac;
-	int ret = 0;
-	int cnt = 0;
-	BYTE ch;
-	BYTE RSSI;
-
-	do{
-
-
-		pac = allocConexioCMM920_packet(pac, MODE, COMMAND, 1);
-		if(pac == NULL) return FALSE;
-		pac->data = (BYTE*)malloc(sizeof(BYTE) * size);
-		if(pac->data == NULL)
-		{
-			printf("Memory allocation error\n");
-			free(pac);
-			return FALSE;
-		}else{
-			for (i = 0; i < size; i++)
-			{
-				pac->data[i] = buf[i];
-			}
-		}
-
-		Array = pktGetBYTEArraySend(pac, size);
-		GetLength = pktGetLengthSend(size);
-		RecvLength = pktGetLengthSend(size);
-	    RecvLength = RecvLength + 8;
-		cRecv = pktGetBYTEcRecvSend(size);
-
-		Serial_PutString(iPort, Array, GetLength * sizeof(BYTE));
-
-		sleep(Wait);
-
-		// 騾∽ｿ｡譎ゅ�ｮ繧ｳ繝槭Φ繝峨ョ繝ｼ繧ｿ縺ｯ髱櫁｡ｨ遉ｺ
-		(void)Serial_GetString(iPort, cRecv, GetLength * sizeof(BYTE));
-
-		sleep(Wait);
-		free(cRecv);
-		cRecv = pktGetBYTEcRecvSend(size);
-
-		// 謚倥ｊ霑斐＠髮ｻ譁�繧貞女菫｡
-		Serial_GetString(iPort, cRecv, RecvLength * sizeof(BYTE));
-
-		// 豈碑ｼ�縺励※蜿嶺ｿ｡螟ｱ謨玲凾縺ｯ謖�螳壼屓謨ｰ縺ｾ縺ｧ繝ｪ繝医Λ繧､
-		for(i = 11; i < (size + 11); i++)
-		{
-			Stmp[i -11] = Array[i];
-		}
-
-		for(i = 13; i < (size + 13); i++)
-		{
-			Rtmp[i -13] = cRecv[i];
-		}
-
-		if(strncmp(Stmp, Rtmp, size) != 0){
-			cnt++;
-			printf("Retry %d Count", cnt);
-			printf("\n");
-		}
-
-//		if(cnt == Retrycnt){
-//			break;
-//		}
-
-	}while(strncmp(Stmp, Rtmp, size) != 0);
-
-	// 蜿嶺ｿ｡繝√Ε繝阪Ν蜿門ｾ�
-	ch = cRecv[9];
-	RecvChannelDisplay(ch);
-
-	// 蜿嶺ｿ｡諢溷ｺｦ蜿門ｾ�
-	RSSI = cRecv[10];
-	RecvSensitivityDisplay(RSSI);
-
-	// 騾∝女菫｡邨先棡陦ｨ遉ｺ
-	printf("Send Telegram = ");
-
-	for(i = 11; i < (size + 11); i++)
-	{
-		Stmp[i -11] = Array[i];
-		printf("%02X", Stmp[i -11]);
-	}
-
-	printf("\n");
-
-	printf("Recv Telegram = ");
-
-	for(i = 13; i < (size + 13); i++)
-	{
-		Rtmp[i -13] = cRecv[i];
-		printf("%02X", Rtmp[i -13]);
-	}
-
-	printf("\n");
-
-	// 豈碑ｼ�蜃ｦ逅�
-	if(strncmp(Stmp, Rtmp, size) == 0){
-		ret = 0;
-	}else{
-		ret = -1;
-	}
-
-	// malloc縺ｧ遒ｺ菫昴＠縺溘Γ繝｢繝ｪ縺ｯ蠢�縺夊ｧ｣謾ｾ縺吶ｋ
-	free(Array);
-	free(cRecv);
-	return ret;
-}
-*/
-/// 繧ｷ繝ｪ繧｢繝ｫ騾壻ｿ｡髢｢菫ゅ�ｮ螳夂ｾｩ
-
-// 920MHz蛻ｶ蠕｡繧ｳ繝槭Φ繝峨↓蠢�隕√↑繝｡繝｢繝ｪ繧堤｢ｺ菫昴☆繧矩未謨ｰ
+// Allocate 920MHz Packet
 PCONEXIO920PACKET allocConexioCMM920_packet(PCONEXIO920PACKET pac, BYTE mode, BYTE com, BYTE isSend )
 {
 	pac = (PCONEXIO920PACKET)malloc(sizeof(CONEXIO920PACKET));
 
 	if(pac == (PCONEXIO920PACKET)NULL) return pac;
 
-	// 騾∽ｿ｡譎ゅ�ｯ 繝代こ繝�繝医�倥ャ繝�縺ｫ蛻晄悄蛟､繧剃ｻ｣蜈･縺吶ｋ( 蜿嶺ｿ｡繝代こ繝�繝医�ｮ蝣ｴ蜷医�ｯ荳崎ｦ�)
+	// if you send the packet, it set header and footer parameters. 
 	if( isSend ){
 		pac->dle = 0x10;
 		pac->stx = 0x02;
@@ -1163,26 +1025,25 @@ PCONEXIO920PACKET allocConexioCMM920_packet(PCONEXIO920PACKET pac, BYTE mode, BY
 	return pac;
 }
 
-// 920MHz蛻ｶ蠕｡繧ｳ繝槭Φ繝峨〒菴ｿ逕ｨ縺励◆繝｡繝｢繝ｪ繧定ｧ｣謾ｾ縺吶ｋ髢｢謨ｰ
+// Free memory 920MHz packet
 void freeConexioCMM920_packet(PCONEXIO920PACKET pac)
 {
 	if(pac->data != (BYTE *)NULL) free(pac->data);
-
 	if(pac != (PCONEXIO920PACKET)NULL ) free(pac);
 }
 
-// 920MHz蛻ｶ蠕｡繧ｳ繝槭Φ繝峨ｒ邨�縺ｿ遶九※繧矩未謨ｰ
+// Make 920MHz packet
 BYTE* pktGetBYTEArray( PCONEXIO920PACKET pac, int size , int *retSize)
 {
 	BYTE* retArray;
 	long cnt;
 	int HeadSize, FootSize, pktSizeOffset;
 
-	HeadSize = 8;	//繝倥ャ繝�繧ｵ繧､繧ｺ 8byte
+	HeadSize = 8;	//header size 8byte
 	pktSizeOffset	= 5;
-	FootSize = 3; //繝輔ャ繧ｿ繧ｵ繧､繧ｺ縺ｯ 3byte(蝗ｺ螳�)
+	FootSize = 3; //footer 3byte(locked)
 
-	// malloc縺ｧ蠢�隕√↑繝｡繝｢繝ｪ鬆伜沺繧堤｢ｺ菫昴☆繧�
+	// malloc packet size 
 	retArray = (BYTE *)malloc(sizeof(BYTE) * (HeadSize + FootSize + size ));
 	if(retArray == (BYTE*)NULL)
 	{
@@ -1220,7 +1081,7 @@ BYTE* pktGetBYTEArray( PCONEXIO920PACKET pac, int size , int *retSize)
 	retArray[size + HeadSize + 2] = pac->etx;
 
 
-	// malloc縺ｧ遒ｺ菫昴＠縺溘Γ繝｢繝ｪ縺ｯ蠢� 縺夊ｧ｣謾ｾ縺吶ｋ
+	/* free memory packet */
 	freeConexioCMM920_packet(pac);
 
 	return retArray;

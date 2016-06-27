@@ -1,6 +1,6 @@
 CC = gcc #selfbuild
 #CC=arm-linux-gnueabi-gcc #crossbuild
-VERSION=1.0.0
+VERSION=1.0.1
 
 all:conexio_CMM920_send.o conexio_CMM920_recv.o
 
@@ -12,4 +12,4 @@ conexio_CMM920_recv.o:
 
 
 clean:
-	rm -f *.o libconexio_CMM920_Test
+	rm -f *.o CMM920*Test_*
