@@ -3,7 +3,7 @@
 /******************************************************************************/
 
 /*
--- Copyright (c) 2014 Tomoyuki Niimi
+-- Copyright (c) 2015 Tomoyuki Niimi, Syunsuke Okamoto
 
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -55,6 +55,12 @@ int main(int argc, char **argv)
 	long iCnt = 1;
 	long Retrycnt = 20;
 	int iWait = 700;
+	int iHop = CONEXIO_CMM920_HOP_SINGLE;
+	int leng = 0;
+	int rxp = 0;
+	BYTE multi64bitAddr[8]={0};
+	unsigned short myId = 0x1234;
+	unsigned short myAddr = 0x9abc;
 
 
 	if( argc >= 1 ){
@@ -74,6 +80,7 @@ int main(int argc, char **argv)
 					printf("options:\n");
 					printf(" -a[AntennaType]\n");
 					printf(" -w[Wait(ms)]\n");
+					printf(" -i[hopmode]\n");
 					printf("Usage:\n");
 					printf("Antenna type internal [0] external [1]\n");
 					return 0;
@@ -91,6 +98,14 @@ int main(int argc, char **argv)
 						ret = -1;
 					}
 				}
+
+				// Wait
+				if(strncmp(argv[i], "-h", strlen("-h")) == 0){
+					if(sscanf(argv[i], "-h%d", &iHop) != 1){
+						ret = -1;
+					}
+				}
+
 
 				i++;
 			}
@@ -140,10 +155,28 @@ int main(int argc, char **argv)
 	}
 
 	// 無線設定要求
-	(void)WirelessSettingRequest();
+//	(void)WirelessSettingRequest();
+	conexio_cmm920_set_wireless(
+				100000,	//100kbps
+				55,		//60ch
+				CONEXIO_CMM920_SET_WIRELESS_POWER_20MW,
+				-85,	//-85 dbm
+				-95,	// -95 dbm
+				130,	// 130(usec)
+				6,
+				4,		// ACK 4回
+				100	// 100(usec)
+		);
 
 	// 応答待ちタイマ設定要求
-	(void)TimerRequest();
+//	(void)TimerRequest();
+	conexio_cmm920_set_timer(100);
+
+	if( iHop == CONEXIO_CMM920_HOP_MULTI )
+	{
+		conexio_cmm920_set_hop_mode(iHop);
+		conexio_cmm920_set_address(myId, multi64bitAddr, myAddr);
+	}
 
 	// 動作モード要求
 	(void)RunRequest();
@@ -155,23 +188,55 @@ int main(int argc, char **argv)
 
 		// 電文受送信
 		memset(&cRecv[0], 0x00, 512 * sizeof(char) );
+		leng = 0;
+		rxp = 0;
+		if( iHop == CONEXIO_CMM920_HOP_SINGLE ){
 		iRet = conexio_cmm920_data_recv(
 				&cRecv[0],
-				NULL,
+				&leng,
 				CONEXIO_CMM920_HOP_SINGLE,
 				NULL,
+				&rxp,
 				NULL
 		);
+		}else{
+		iRet = conexio_cmm920_data_recv_multi(
+				&cRecv[0],
+				&leng,
+				NULL,
+				NULL,
+				NULL,
+				NULL,
+				NULL,
+				NULL,
+				NULL				
+		);
+		}
 		usleep(iWait * 1000);
 
-		if(!iRet){
-			conexio_cmm920_data_send(
-				&cRecv[0],
-				36,
-				CONEXIO_CMM920_HOP_SINGLE,
-				CONEXIO_CMM920_SENDDATA_MODE_NOACK_NORESP,
-				NULL
-			);
+		if( !iRet && leng > 0 ){
+
+			printf(" rx power = %d \n", rxp );
+
+			if(iHop == CONEXIO_CMM920_HOP_SINGLE){
+				conexio_cmm920_data_send_single(
+					&cRecv[0],
+					36,
+					CONEXIO_CMM920_SENDDATA_MODE_NOACK_NORESP,
+					NULL
+				);
+			}else{
+				conexio_cmm920_data_send_multi(
+					&cRecv[0],
+					36,
+					CONEXIO_CMM920_SENDDATA_MODE_ACK_NORESP,
+					0x1234,
+					myId,
+					0x5678,
+					myAddr,
+					NULL
+				);
+			}
 		}
 
 		

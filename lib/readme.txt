@@ -96,10 +96,9 @@ conexio_cmm920_lsi_diversity_enable
 		CONEXIO_CMM920_SET_ENABLE  有効
 		CONEXIO_CMM920_SET_DISABLE   無効
 
-conexio_cmm920_data_send
+conexio_cmm920_data_send_single
 	buf	：データバッファ
 	size	：データサイズ
-	hop	：ホップ（今はシングルのみ)
 	send_mode:送信モード
 		CONEXIO_CMM920_SENDDATA_MODE_NOACK_NORESP　	：ACKなし　レスポンスなし
 		CONEXIO_CMM920_SENDDATA_MODE_ACK_NORESP		：ACKあり　レスポンスなし
@@ -108,14 +107,29 @@ conexio_cmm920_data_send
 
 	r_buf	:send_modeがACKが変える場合のときの、受信データ
 
+conexio_cmm920_data_send_multi
+	buf	：データバッファ
+	size	：データサイズ
+	send_mode:送信モード
+		CONEXIO_CMM920_SENDDATA_MODE_NOACK_NORESP　	：ACKなし　レスポンスなし
+		CONEXIO_CMM920_SENDDATA_MODE_ACK_NORESP		：ACKあり　レスポンスなし
+		CONEXIO_CMM920_SENDDATA_MODE_NOACK_RESP		：ACKなし　レスポンスあり
+		CONEXIO_CMM920_SENDDATA_MODE_ACK_RESP		：ACKあり　レスポンスあり
+
+	dest_id : 送信先 PAN ID
+	src_id : 送信元　PAN ID
+	dest_addr : 送信先　short Addr
+	src_addr : 送信元 short Addr
+	r_buf	:send_modeがACKが変える場合のときの、受信データ
+
 conexio_cmm920_data_recv
 	buf	：受信データバッファ（あらかじめ配列を用意する必要あり）
 	size	：受信データサイズ（サイズ=0で引き渡すと受信したデータのサイズが格納される。また、
 		　受信データサイズをあらかじめ入れた場合はパケットチェックでデータサイズもチェックする）
 	hop	：ホップ数　（現在はシングルホップのみ）
 	r_channel：受信チャネル番号
-	rssi	：受信強度
-
+	rx_pwr	：受信強度 (-11dBm ～ -110dBm )
+	crc	：CRCチェック値
 
 // wrapper function
 conexio_cmm920_set_mode
@@ -126,11 +140,13 @@ conexio_cmm920_set_mode
 		CONEXIO_CMM920_SET_MODE_TEST　：　テストモード
 
 conexio_cmm920_set_address
-(unsigned short panId, BYTE Addr[], unsigned short shortAddr );
-extern int conexio_cmm920_set_wireless(int iBitrate, BYTE channel, BYTE power, char sendLv, char recvLv, unsigned short sendTim, BYTE sendNum, BYTE ackRetryNum, unsigned short ackWaitTim);
-extern int conexio_cmm920_set_timer( unsigned short tim );
-extern int conexio_cmm920_set_auto_ack_frame( unsigned short phr, unsigned char fc_upper );
-extern int conexio_cmm920_set_antenna( BYTE antennaMode );
+	panId		：自身のPAN ID
+	Addr[]		：自身のロングアドレス
+	shortAddr	：自身のショートアドレス
+conexio_cmm920_set_wireless(int iBitrate, BYTE channel, BYTE power, char sendLv, char recvLv, unsigned short sendTim, BYTE sendNum, BYTE ackRetryNum, unsigned short ackWaitTim);
+conexio_cmm920_set_timer( unsigned short tim );
+conexio_cmm920_set_auto_ack_frame( unsigned short phr, unsigned char fc_upper );
+conexio_cmm920_set_antenna( BYTE antennaMode );
 
 //デフォルト値設定関数（ VCCIなどで使用した値 )
 conexio_cmm920_set_wireless_default

@@ -3,13 +3,31 @@
 	libconexio_CMM920_func.c - conexio_CMM920_functions library
 	
 	Copyright (C) 2015 Tomoyuki Niimi, Syunsuke Okamoto.<okamoto@contec.jp>
+*
+* This library is free software; you can redistribute it and/or
+* modify it under the terms of the GNU Lesser General Public
+* License as published by the Free Software Foundation; either
+* version 2.1 of the License, or (at your option) any later version.
+* 
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+* Lesser General Public License for more details.
+* 
+* You should have received a copy of the GNU Lesser General Public
+* License along with this library; if not, see
+   <http://www.gnu.org/licenses/>.  
 
-	This Library is proprietary Library. 
-	Because, the Specification of conexio CMM920 is confidential.
-
-	update 2015.01.08 (1) Fixed memory leak error.
- 	                  (2) Fixed Initialize value error.
+	  update 2016.01.08 (1) Fixed memory leak error.
+ 	                    (2) Fixed Initialize value error.
                       (3) Fixed return length of RecvCommandAck function.
+    update 2016.01.11 (1) Added Lsi sub functions.
+                      (2) Added MHR functions.
+                      (3) Fixed crc parameter to add RecvTelegramSingleHop function.
+    update 2016.01.15 (1) Fixed [WRITE or READ flag] byte offset 3, with Lsi function. 
+                      (2) Fixed sequence number added MHR.
+                      (3) Fixed change value name , from panid to shortAddr.
+                      (4) Fixed change value name,  from send_size to size.
 ***/
 
 #include <stdio.h>
@@ -24,15 +42,36 @@
 #include "libconexio_CMM920.h"
 #include "serialfunc.h"
 
-#if 0
+#if 1
 #define DbgPrint(fmt...)	printf(fmt)
 #else
 #define DbgPrint(fmt...)	do { } while (0)
 #endif
 
+#if 0
+#define DbgAllocFreeCheck(fmt...)	printf(fmt)
+#else
+#define DbgAllocFreeCheck(fmt...)	do { } while (0)
+#endif
+
+#if 0
+#define DbgDataLength(fmt...)	printf(fmt)
+#else
+#define DbgDataLength(fmt...)	do { } while (0)
+#endif
+
+#if 0
+#define DbgRecvTelegramParam(fmt...)	printf(fmt)
+#else
+#define DbgRecvTelegramParam(fmt...)	do { } while (0)
+#endif
+
 int iWait;
 
+
+static int global_seq_num = 0;
 static int iPort;
+static short global_getLastError = 0;
 
 /***
 	@function _conexio_cmm920_check_read_or_write
@@ -46,16 +85,6 @@ static int _conexio_cmm920_check_read_or_write( int iFlag )
 	default:
 		return 1;
 	}
-}
-
-static int _conexio_cmm920_alloc_command( BYTE* command,  int size )
-{
-		command = (BYTE*)malloc( sizeof(BYTE) * size );
-
-		if( command == (BYTE*) NULL ){
-			return 1;
-		}
-		return 0;
 }
 
 BYTE _calc_Hex2Bcd( BYTE hex ){
@@ -91,8 +120,17 @@ int _conexio_cmm920_Hex2dBm( BYTE hex ){
 
 int _conexio_cmm920_send_recv( BYTE Data[], int size ,int mode, int command ){
 	int iRet, send_size = size;
+	int offset = 0; // 2016.01.15 (1) add
 
-	if( Data[0] == CONEXIO_CMM920_SET_READING_READ ){
+	// 2016.01.15 (1) start
+	if( mode == CONEXIO_CMM920_MODE_COMMON && 
+		command == CONEXIO_CMM920_SET_LSI 
+	){
+		offset = 3;
+	}
+	// 2016.01.15 (1) end
+
+	if( Data[offset] == CONEXIO_CMM920_SET_READING_READ ){
 		send_size = 1;
 	}
 
@@ -102,8 +140,8 @@ int _conexio_cmm920_send_recv( BYTE Data[], int size ,int mode, int command ){
 
 	usleep(iWait);
 
-	iRet = RecvCommandAck(Data, &send_size,	mode, command );
-
+	//iRet = RecvCommandAck(Data, &send_size,	mode, command );
+	iRet = RecvCommandAck(Data, &size,	mode, command ); // 2016.01.15 (4)
 	if( iRet < 0 )	return (-16 * 2) + iRet;
 	
 	return iRet;
@@ -123,7 +161,7 @@ int conexio_cmm920_init(char *PortName){
 		iLength,
 		iStop,
 		iParity,
-		0 ,
+		100 ,
 		0
 	);
 
@@ -131,7 +169,7 @@ int conexio_cmm920_init(char *PortName){
 		return 1;
 	}
 
-	iWait = 10000;
+	iWait = 50000;
 
 	return 0;
 }
@@ -144,6 +182,13 @@ int conexio_cmm920_exit()
 	Serial_PortClose(iPort);
 
 	return 0;
+}
+
+// GetLastError
+
+int conexio_cmm920_get_last_error(){
+
+	return global_getLastError;
 }
 
 // reset
@@ -188,10 +233,12 @@ int conexio_cmm920_mode(BYTE isWrite , int *code)
 
 	if( isWrite == CONEXIO_CMM920_SET_READING_WRITE ){
 		switch( *code ){
-		case CONEXIO_CMM920_SET_MODE_STOP:
 		case CONEXIO_CMM920_SET_MODE_SETTING:
 		case CONEXIO_CMM920_SET_MODE_RUN:
 		case CONEXIO_CMM920_SET_MODE_TEST:
+			break;
+		case CONEXIO_CMM920_SET_MODE_STOP:
+			tcflush( iPort, TCIOFLUSH );
 			break;
 		default:
 			DbgPrint("<conexio_cmm920_mode>:Parameter Error\n");
@@ -233,7 +280,7 @@ int conexio_cmm920_address(BYTE isWrite, unsigned short *panId, BYTE Addr[], uns
 	int Size = 13;
 	int i;
 
-	DbgPrint("conexio_cmm920_address_setting PAN ID %x Short Addr : %x\n", * panId, *shortAddr);
+	DbgPrint("conexio_cmm920_address_setting PAN ID %x Short Addr : %x\n", *panId, *shortAddr);
 
 
 	if( _conexio_cmm920_check_read_or_write( isWrite ) ){
@@ -249,8 +296,10 @@ int conexio_cmm920_address(BYTE isWrite, unsigned short *panId, BYTE Addr[], uns
 		for( i = 0 ; i < 8; i ++ ){
 			Data[3 + i] = Addr[i];
 		}
-		Data[11] = ( *panId & 0xFF00 )>> 8;
-		Data[12] = ( *panId & 0xFF );
+		// 2016.01.15 (3) start
+		Data[11] = ( *shortAddr & 0xFF00 )>> 8;
+		Data[12] = ( *shortAddr & 0xFF );
+		// 2016.01.15 (3) end
 	}
 
 	iRet = _conexio_cmm920_send_recv(
@@ -483,10 +532,10 @@ int conexio_cmm920_antenna( BYTE isWrite, BYTE *antennaMode )
 	if( isWrite == CONEXIO_CMM920_SET_READING_WRITE ){
 		switch( *antennaMode ){
 
-		case CONEXIO_CMM920_SET_ANTENNA_EXTERNAL:
+		case CONEXIO_CMM920_SET_ANTENNA_01:
 			DbgPrint("<EXTERNAL>\n");
 			break;
-		case CONEXIO_CMM920_SET_ANTENNA_INTERNAL:
+		case CONEXIO_CMM920_SET_ANTENNA_00:
 			DbgPrint("<INTERNAL>\n");
 			break;
 		default:
@@ -608,6 +657,9 @@ int conexio_cmm920_lsi(unsigned long lsi_addr, int isWrite, unsigned short *valu
 
 }
 
+// Lsi function ( extensions )
+
+// Data Preemble Bit Length
 int conexio_cmm920_lsi_data_preamble_bit_len(int isWrite, BYTE length)
 {
 	unsigned long lsi_addr;
@@ -634,6 +686,7 @@ int conexio_cmm920_lsi_data_preamble_bit_len(int isWrite, BYTE length)
 	return iRet;
 }
 
+// Data Whitening < Enable / Disable >
 int conexio_cmm920_lsi_data_whitening( int isWrite, BYTE isEnable )
 {
 	unsigned long lsi_addr;
@@ -661,6 +714,7 @@ int conexio_cmm920_lsi_data_whitening( int isWrite, BYTE isEnable )
 	return iRet;
 }
 
+// Diversity <Enable / Disable>
 int conexio_cmm920_lsi_diversity_enable( int isWrite, BYTE isEnable )
 {
 	unsigned long lsi_addr;
@@ -688,40 +742,398 @@ int conexio_cmm920_lsi_diversity_enable( int isWrite, BYTE isEnable )
 	return iRet;
 }
 
-int conexio_cmm920_data_send(BYTE buf[], int size, int hop, int send_mode, BYTE r_buf[])
-{
-	int iRet;
-	iRet = SendTelegram(buf, size, hop, send_mode );
 
-	if( send_mode != CONEXIO_CMM920_SENDDATA_MODE_NOACK_NORESP &&
-		r_buf != NULL )
-	{
-		iRet = RecvTelegram(r_buf, &size, hop, NULL, NULL);
+// MHR <Enable / Disable>
+int conexio_cmm920_lsi_mhr_mode( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_mhr_mode>:Parameter Error : %x\n", iRet );
+		return -1;
 	}
+
+	lsi_addr = CONEXIO_CMM920_LSIADDRESS_MHR_MODE;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_mhr_mode>:Error : %x\n", iRet );
+	}
+
 	return iRet;
 }
 
-int conexio_cmm920_data_recv(BYTE buf[], int *size, int hop, int *r_channel, int *rssi ){
+// CRC CALC INVERSE <Enable / Disable>
+int conexio_cmm920_lsi_crc_calc_inverse( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
 
-	return RecvTelegram(buf, size, hop , r_channel, rssi );
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_crc_calc_inverse>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSIADDRESS_CRC_CALC_INVERSE;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_crc_calc_inverse>:Error : %x\n", iRet );
+	}
+
+	return iRet;
 }
 
+int conexio_cmm920_lsi_s_panid_filter( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_s_panid_filter>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSIADDRESS_FILTER_S_PANID;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_s_panid_filter>:Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+int conexio_cmm920_lsi_d_panid_filter( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_d_panid_filter>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSIADDRESS_FILTER_D_PANID;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_d_panid_filter>:Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+int conexio_cmm920_lsi_d_address_filter( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_d_address_filter>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSIADDRESS_FILTER_D_ADDR;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_d_address_filter>:Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+int conexio_cmm920_lsi_data_sfd( int isWrite, unsigned short address, BYTE sfd_no )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	lsi_addr = CONEXIO_CMM920_LSIADDRESS_SFD( sfd_no );
+	value = address;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			address = value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_data_sfd>:Error : %x\n", iRet );
+	}
+	
+	return iRet;
+}
+
+// End Lsi Functions < Extension >
+
+//int conexio_cmm920_data_send_single(BYTE buf[], int size, int hop, int send_mode, BYTE r_buf[] ) //2016.01.11 (2)
+int conexio_cmm920_data_send_single(BYTE buf[], int size, int send_mode, BYTE r_buf[] )
+{
+	int iRet;
+	BYTE antenna_mode = 0;
+
+	if( antenna_mode == CONEXIO_CMM920_SET_ANTENNA_01 ){
+		printf("CATION : SETTING ANTENNA MODE 1 CANNOT SEND DATA.< TELEC VIOLATION >");
+		return 1;
+	}
+
+	iRet = SendTelegram(buf, size, CONEXIO_CMM920_HOP_SINGLE, send_mode , NULL, NULL, NULL, NULL );
+
+	if( r_buf != NULL )
+	{
+		iRet = RecvTelegram(r_buf, &size, CONEXIO_CMM920_HOP_SINGLE, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+	}
+
+	return iRet;
+}
+
+int conexio_cmm920_data_send_multi(BYTE buf[], int size, int send_mode, unsigned short dest_id, unsigned short src_id, long dest_addr, long src_addr, BYTE r_buf[])
+{
+	int iRet;
+
+	iRet = SendTelegram(buf, size, CONEXIO_CMM920_HOP_MULTI, send_mode , &dest_id, &src_id, &dest_addr, &src_addr );
+
+	if( r_buf != NULL )
+	{
+		iRet = RecvTelegram(r_buf, &size, CONEXIO_CMM920_HOP_MULTI, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+	}
+
+	return iRet;
+}
+
+int conexio_cmm920_data_recv(BYTE buf[], int *size, int hop, int *r_channel, int *rx_pwr, unsigned int *crc_val ){
+
+	return RecvTelegram(buf, size, hop , r_channel, rx_pwr, crc_val, NULL, NULL, NULL, NULL );
+}
+
+
+int conexio_cmm920_data_recv_single(BYTE buf[], int *size, int *r_channel, int *rx_pwr, unsigned int *crc_val ){
+
+	
+
+	return RecvTelegram(buf, size, CONEXIO_CMM920_HOP_SINGLE ,r_channel, rx_pwr, crc_val, NULL, NULL, NULL, NULL );
+}
+
+
+int conexio_cmm920_data_recv_multi(BYTE buf[], int *size, int *r_channel, int *rx_pwr, unsigned int *crc_val, unsigned short *dest_id, unsigned short *src_id, long *dest_addr, long *src_addr ){
+	return RecvTelegram(buf, size, CONEXIO_CMM920_HOP_MULTI , r_channel, rx_pwr, crc_val, dest_id, src_id, dest_addr, src_addr );
+}
+
+// 2016.01.11 (2) 
 /// 920MHz Send Run-mode Packet function
 
-int SendTelegram(BYTE buf[], int size, int hop, int send_mode){
+int calcMHR(int dest_mode, int src_mode, int version, int panidcomp , unsigned short *fc)
+{
+	int size = 3; // 2016.01.15 (2) change
 
-	return SendTelegramSingleHop(buf, size, send_mode);
+	*fc = CONEXIO_CMM920_MHR_FC(src_mode, version, dest_mode, 0, panidcomp, 0, 0, 0, 1);
+
+	if( version < 0x02 ){
+
+		switch( dest_mode ){
+		case CONEXIO_CMM920_MHR_FC_DESTADDRMODE_8BIT:
+			size += 3; // pan id (2 byte ) + addr (1 byte)
+			break;
+		case CONEXIO_CMM920_MHR_FC_DESTADDRMODE_16BIT:
+			size += 4; // pan id (2 byte ) + addr (2 byte)
+			break;
+		}
+
+		switch( src_mode ){
+		case CONEXIO_CMM920_MHR_FC_SRCADDRMODE_8BIT:
+			size += 3; // pan id (2 byte ) + addr (1 byte)
+			break;
+		case CONEXIO_CMM920_MHR_FC_SRCADDRMODE_16BIT:
+			size += 4; // pan id (2 byte ) + addr (2 byte)
+			break;
+		}
+	}
+
+	return size;
+}
+
+int addMHR(BYTE pktBuf[] , unsigned short fc, unsigned short *dest_id, unsigned short *src_id, long *dest_addr, long *src_addr)
+{
+	unsigned int offset = 0;
+	unsigned int val_base_addr = 6; // 2016.01.15 (2)
+
+	pktBuf[3] = ( fc & 0xFF );
+	pktBuf[4] = ( ( fc & 0xFF00 ) >> 8 );
+
+	//seq number追加(仮)
+	pktBuf[5] = global_seq_num++; // 2016.01.15 (2)
+
+	if( dest_id != NULL ){
+		pktBuf[val_base_addr + offset] = ( *dest_id & 0xFF );
+		pktBuf[val_base_addr + 1 + offset] = ( ( *dest_id & 0xFF00 ) >> 8 );
+		offset += 2;
+	}
+	if( dest_addr != NULL ){
+		switch( CONEXIO_CMM920_MHR_FC_DESTADDRMODE( fc ) ){
+		case CONEXIO_CMM920_MHR_FC_DESTADDRMODE_NONE:
+			break;
+		case CONEXIO_CMM920_MHR_FC_DESTADDRMODE_8BIT:
+			pktBuf[val_base_addr + offset] = ( *dest_addr & 0xFF );
+			offset += 1;
+			break;
+		case CONEXIO_CMM920_MHR_FC_DESTADDRMODE_16BIT:
+			pktBuf[val_base_addr + offset] = ( *dest_addr & 0xFF );
+			pktBuf[val_base_addr + 1 + offset] = ( ( *dest_addr & 0xFF00 ) >> 8 );
+			offset += 2;
+			break;
+		}
+	}
+	if( src_id != NULL ){
+		pktBuf[val_base_addr + offset] = ( *src_id & 0xFF );
+		pktBuf[val_base_addr + 1 + offset] = ( ( *src_id & 0xFF00 ) >> 8 );
+		offset += 2;
+	}
+
+	if( src_addr != NULL ){
+		switch( CONEXIO_CMM920_MHR_FC_SRCADDRMODE( fc ) ){
+		case CONEXIO_CMM920_MHR_FC_SRCADDRMODE_NONE:
+			break;
+		case CONEXIO_CMM920_MHR_FC_SRCADDRMODE_8BIT:
+			pktBuf[val_base_addr + offset] = ( *src_addr & 0xFF );
+			offset += 1;
+			break;
+		case CONEXIO_CMM920_MHR_FC_SRCADDRMODE_16BIT:
+			pktBuf[val_base_addr + offset] = ( *src_addr & 0xFF );
+			pktBuf[val_base_addr + 1 + offset] = ( ( *src_addr & 0xFF00 ) >> 8 );
+			offset += 2;
+			break;
+		}
+	}
+
+	return offset;
+}
+
+int parseMHR(BYTE dataBuf[] , unsigned short *pFc, BYTE *pSeq_no, unsigned short *pDest_id, unsigned short *pSrc_id, long *pDest_addr, long *pSrc_addr)
+{
+	unsigned int offset = 3;
+
+	unsigned short fc = 0;
+	BYTE seq_no = 0;
+	unsigned short dest_id;
+	unsigned short src_id;
+	long dest_addr;
+	long src_addr;
+
+
+	fc = ( dataBuf[1] << 8 ) | dataBuf[0];
+	seq_no = dataBuf[2];
+	
+	{
+		dest_id = ( dataBuf[ offset + 1 ] << 8 ) + dataBuf[ offset ];
+		offset += 2;
+	}
+
+	{
+		switch( CONEXIO_CMM920_MHR_FC_DESTADDRMODE( fc ) ){
+		case CONEXIO_CMM920_MHR_FC_DESTADDRMODE_NONE:
+			break;
+		case CONEXIO_CMM920_MHR_FC_DESTADDRMODE_8BIT:
+			dest_addr = dataBuf[ offset ];
+			offset += 1;
+			break;
+		case CONEXIO_CMM920_MHR_FC_DESTADDRMODE_16BIT:
+			dest_addr = ( dataBuf[ offset + 1 ] << 8 ) + dataBuf[ offset ];
+			offset += 2;
+			break;
+		}
+	}
+
+	{
+		src_id = ( dataBuf[ offset + 1 ] << 8 ) + dataBuf[ offset ];
+		offset += 2;
+	}
+
+	{
+		switch( CONEXIO_CMM920_MHR_FC_SRCADDRMODE( fc ) ){
+		case CONEXIO_CMM920_MHR_FC_SRCADDRMODE_NONE:
+			break;
+		case CONEXIO_CMM920_MHR_FC_SRCADDRMODE_8BIT:
+			src_addr = dataBuf[ offset ];
+			offset += 1;
+			break;
+		case CONEXIO_CMM920_MHR_FC_SRCADDRMODE_16BIT:
+			src_addr = ( dataBuf[ offset + 1 ] << 8 ) + dataBuf[ offset ];
+			offset += 2;
+			break;
+		}
+	}
+
+	if( pFc != NULL ) *pFc = fc;
+	if( pSeq_no != NULL )	*pSeq_no = seq_no;
+	if( pDest_addr != NULL ) *pDest_addr = dest_addr;
+	if( pDest_id != NULL )	*pDest_id = dest_id;
+	if( pSrc_addr != NULL ) *pSrc_addr = src_addr;
+	if( pSrc_id != NULL ) *pSrc_id = src_id;
+
+	DbgPrint("<parseMHR> fc:%x seq_no:%d dest_id : %x src_id : %x dest_addr :%lx src_addr : %lx \n ",
+		fc, seq_no, dest_id, src_id, dest_addr, src_addr);
+
+	return offset;
 
 }
 
-int SendTelegramSingleHop(BYTE buf[], int size, int send_mode){
+int SendTelegram(BYTE buf[], int size, int hop, int send_mode, unsigned short *dest_id, unsigned short *src_id, long *dest_addr, long *src_addr)
+{
 
 	BYTE*	pktBuf;
 	int pktSize;
 	int i, ret;
+	int offset = 0;
+	unsigned short fc = 0;
 
-	pktBuf = (BYTE*)malloc( (size + 3) * sizeof(BYTE) );
-	pktSize = size + 3;
+
+	if( hop == CONEXIO_CMM920_HOP_MULTI ){
+		offset = calcMHR(
+			CONEXIO_CMM920_MHR_FC_DESTADDRMODE_16BIT,
+			CONEXIO_CMM920_MHR_FC_SRCADDRMODE_16BIT,
+			0x00,
+			0x00,
+			&fc
+		);
+	}
+
+	pktBuf = (BYTE*)malloc( (size + offset + 3) * sizeof(BYTE) );
+	pktSize = size + offset + 3;
 
 	switch( send_mode ){
 	case CONEXIO_CMM920_SENDDATA_MODE_NOACK_NORESP:
@@ -733,25 +1145,60 @@ int SendTelegramSingleHop(BYTE buf[], int size, int send_mode){
 		return 0;
 	}
 
+
 	pktBuf[0] = send_mode;
-	pktBuf[1] = ( size + 4 ) >> 8;
-	pktBuf[2] = ( size + 4 ) % 256;
+	pktBuf[1] = ( size + offset + 4 ) >> 8;
+	pktBuf[2] = ( size + offset + 4 ) % 256;
+
+	if( hop == CONEXIO_CMM920_HOP_MULTI ){
+		addMHR(pktBuf, fc, dest_id, src_id, dest_addr, src_addr);
+	}
 
 	for( i = 0; i < size ; i ++ ){
-		pktBuf[3 + i] = buf[i];
+		pktBuf[3 + offset + i] = buf[i];
 	}
 
 	ret = (int)SendCommand(pktBuf, pktSize, CONEXIO_CMM920_MODE_RUN, CONEXIO_CMM920_SENDDATA);
 
 	return ret;
+
 }
 
-int RecvTelegram(BYTE buf[], int *size , int hop, int *r_channel, int *rssi )
+
+int RecvTelegram(BYTE buf[], int *size , int hop, int *r_channel, int *rx_pwr, unsigned int *crc ,unsigned short *dest_id, unsigned short *src_id, long *dest_addr, long *src_addr)
 {
-	return RecvTelegramSingleHop(buf, size, r_channel, rssi);
+	int iRet = 0;	
+	int offset = 0;
+	int i;
+	int iSize = 0;
+
+
+	if( hop == CONEXIO_CMM920_HOP_SINGLE )	return RecvTelegramSingleHop(buf, size, r_channel, rx_pwr, crc);
+
+	iRet = RecvTelegramSingleHop(buf, &iSize, r_channel, rx_pwr, crc);
+
+	if( iRet == 0 ){
+		if( iSize > 0 ){
+			offset = parseMHR(	 buf, NULL, NULL, dest_id, src_id, dest_addr, src_addr );
+
+			for( i = offset; i < iSize; i ++ ){
+				buf[i - offset] = buf[i];
+				DbgPrint("%x", buf[i - offset]);
+			}
+			DbgPrint(":Length %d\n", iSize - offset );
+			memset( &buf[iSize - offset], 0x00, offset );
+			if( size != NULL )	*size = iSize - offset;
+		}else{
+			if( size != NULL )	*size = 0;
+		}
+	}
+
+
+	return iRet;
+
 }
 
-int RecvTelegramSingleHop(BYTE buf[], int *size , int *r_channel, int *rssi )
+int RecvTelegramSingleHop(BYTE buf[], int *size , int *r_channel, int *rx_pwr , unsigned int *crc )
 {
 
 	BYTE*	pktBuf;
@@ -766,46 +1213,62 @@ int RecvTelegramSingleHop(BYTE buf[], int *size , int *r_channel, int *rssi )
 	if( size != NULL && *size != 0 ){
 		pktSize = *size + head_size + foot_size;
 		pktBuf = (BYTE*)malloc( pktSize * sizeof(BYTE) );
-		memset(pktBuf, 0, ( pktSize * sizeof(BYTE) ));	// 2015.01.08 (2)
+		memset(pktBuf, 0, ( pktSize * sizeof(BYTE) ));	// 2016.01.08 (2)
 	}else{
 		pktSize = 0;
 		pktBuf = (BYTE*)malloc( ( 512 + head_size + foot_size ) * sizeof(BYTE) );
-		memset(pktBuf, 0, ( 512 + head_size + foot_size ) * sizeof(BYTE) ); // 2015.01.08 (2)	
+		memset(pktBuf, 0, ( 512 + head_size + foot_size ) * sizeof(BYTE) ); // 2016.01.08 (2)	
 	}
 	// Data Received
 	iRet = RecvCommandAck(pktBuf, &pktSize, CONEXIO_CMM920_MODE_RUN, CONEXIO_CMM920_SENDDATA);
 
 	if( iRet ){
-		free(pktBuf); // 2015.01.08 (1)
+		free(pktBuf); // 2016.01.08 (1)
 		return iRet;
 	}
 
-	if( pktBuf[0] == 0x01 ){
-		if( r_channel != NULL )
-			*r_channel = _conexio_cmm920_Hex2dBm(pktBuf[1]);
-		if( rssi != NULL )
-			*rssi = _calc_Hex2Bcd(pktBuf[2]);
 
-		d_size = pktBuf[3] * 256 + pktBuf[4];
+	if( pktSize > 0 ){
+		if( pktBuf[0] == 0x01 ){
+			
+			if( pktSize >= 3 )	DbgRecvTelegramParam("pktBuf[2] = 0x%x\n", pktBuf[2]);
 
-		for( i = 0; i < d_size ; i ++ ){
-			buf[i] = pktBuf[head_size + i];
+			if( r_channel != NULL )
+				*r_channel = _calc_Hex2Bcd(pktBuf[1]);
+			if( rx_pwr != NULL ){
+				*rx_pwr = _conexio_cmm920_Hex2dBm(pktBuf[2]);
+				DbgRecvTelegramParam("*rx_pwr = 0x%x\n", *rx_pwr);
+			}
+			d_size = pktBuf[3] * 256 + pktBuf[4];
+
+			if( buf != NULL ){
+				if( d_size < pktSize ){ 
+					for( i = 0; i < d_size - (crc_size / 8) ; i ++ ){
+						buf[i] = pktBuf[head_size + i];
+					}
+				}
+			}
+			//crc, rx_rssi, rx_ant
+		
+			if( size != NULL ) *size = d_size; // 2016.01.08 (3)
+			// 2016.01.11 (3) start
+			if( crc != NULL ){
+				for( i = 0, *crc = 0; i < (crc_size / 8); i ++)
+					*crc |= (*crc << 8) | pktBuf[head_size + d_size - (crc_size / 8) + i];
+			}
+			// 2016.01.11 (3) end
 		}
-		//crc, rx_rssi, rx_ant
-		
-		if( size != NULL ) *size = d_size; // 2015.01.08 (3)
-		
 	}
 	
-	free(pktBuf);// 2015.01.08 (1)
+	free(pktBuf);// 2016.01.08 (1)
 	return 0;
 }
 
-// 險ｭ螳夐�∽ｿ｡繧ｳ繝槭Φ繝�
+// Send Command CMM920
 int SendCommand(BYTE buf[], int size, BYTE mode, BYTE command )
 {
 	BYTE *array;
-	int length;
+	int length = 0;
 	int i;
 	PCONEXIO920PACKET pac;
 
@@ -819,15 +1282,19 @@ int SendCommand(BYTE buf[], int size, BYTE mode, BYTE command )
 		free(pac);
 		return -2;
 	}else{
+		DbgAllocFreeCheck("<SendCommand> Alloc PAC data\n");
+
 		for (i = 0; i < size; i++)
 		{
 			pac->data[i] = buf[i];
 		}
 	}
+
 	array = pktGetBYTEArray( pac, size , &length);
 	//length = pktGetLength(size);
 
-	DbgPrint("Port %x, length :%d \n ",iPort, length);
+	DbgPrint("Port %x, size :%d length :%d \n ",iPort, size, length);
+	tcflush( iPort, TCIFLUSH );
 	Serial_PutString(iPort, array, ( length * sizeof(BYTE) ) );
 
 	DbgPrint("Send Data = ");
@@ -848,9 +1315,10 @@ int pktChkBYTEArray(PCONEXIO920PACKET pac, BYTE *array, int size )
 {
 	long cnt;
 	int HeadSize, FootSize, pktSizeOffset;
+	int iRet = 0;
 
-	HeadSize = 8;	//繝倥ャ繝�繧ｵ繧､繧ｺ 8byte
-	FootSize = 3; //繝輔ャ繧ｿ繧ｵ繧､繧ｺ縺ｯ 3byte(蝗ｺ螳�)
+	HeadSize = 8;	//header size 8byte
+	FootSize = 3; //footer size 3byte
 	pktSizeOffset = 5;
 
 	if(array == NULL)
@@ -859,53 +1327,67 @@ int pktChkBYTEArray(PCONEXIO920PACKET pac, BYTE *array, int size )
 		return 1;
 	}
 
+	/*  Error Code */
+	global_getLastError = (array[5] << 8) + array[6];
+
 	/* header Check */
 	if( array[0] != pac->dle || 
-		array[1] != pac->stx ||
-		array[2] != (BYTE)((size + pktSizeOffset) >> 8) ||
-		array[3] != (BYTE)((size + pktSizeOffset) % 256) ||
-		array[4] != ( pac->command[0] | CONEXIO_CMM920_RECVCOMMAND ) ||
-		array[5] != pac->command[1]
-	){
+		array[1] != pac->stx ){
 		DbgPrint("<pktChkBYTEArray> Header error\n");
-		return 2;
+		iRet |= 2;
 	}
-
-	/* check sum Check */
-	for(pac->sum = 0, cnt = 2; cnt < size + HeadSize; cnt++)
-	{
-		pac->sum += array[cnt];
+	else	if( array[2] != (BYTE)((size + pktSizeOffset) >> 8) ||
+				array[3] != (BYTE)((size + pktSizeOffset) % 256) ){
+			DbgPrint("<pktChkBYTEArray> size check error\n");
+			iRet |= 4;
 	}
-	if( array[size + HeadSize] != (BYTE)((pac->sum ^ 0xFF) + 1) ){
-		DbgPrint("<pktChkBYTEArray> CRC Error\n");
-		return 3;
-	}
-
 	/* footer Check */
-	if( array[size + HeadSize + 1] != pac->dle ||
+	else if( array[size + HeadSize + 1] != pac->dle ||
 		array[size + HeadSize + 2] != pac->etx
 	){
-		DbgPrint("<pktChkBYTEArray> Footer Error\n");
-		return 4;
+		DbgPrint("<pktChkBYTEArray> Footer Error (%x), (%x) \n", array[size + HeadSize + 1], array[size + HeadSize + 2]);
+		iRet |= 8;
+	}else{
+		if( array[4] != ( pac->command[0] | CONEXIO_CMM920_RECVCOMMAND ) ||
+				array[5] != pac->command[1]
+		){
+			DbgPrint("<pktChkBYTEArray> Myself command ack Error\n");
+			iRet |= 16;
+			if( array[4] == CONEXIO_CMM920_RECVCOMMAND && 
+				array[5] == 0xFF )
+			{
+				DbgPrint("<pktChkBYTEArray> unusual Command \n");
+			} 
+		}
+
+		/* check sum Check */
+		for(pac->sum = 0, cnt = 2; cnt < size + HeadSize; cnt++)
+		{
+			pac->sum += array[cnt];
+		}
+		if( array[size + HeadSize] != (BYTE)((pac->sum ^ 0xFF) + 1) ){
+			DbgPrint("<pktChkBYTEArray> Check Sum Error\n");
+			iRet |= 32;
+		}
+
+		for (cnt = 0; cnt < size; cnt ++)
+		{
+			pac->data[cnt] = array[cnt + HeadSize];
+		}
 	}
 
-	for (cnt = 0; cnt < size; cnt ++)
-	{
-		pac->data[cnt] = array[cnt + HeadSize];
-	}
-
-	return 0;
+	return iRet;
 }
 
 int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 {
 
 	BYTE *array;
-	BYTE head_data[4];
-	int length;
+	BYTE head_data[4] = {0};
+	int length = 0;
 	int i;
-	int iRet;
-	int d_size;
+	int iRet = 0;
+	int d_size = 0;
 	PCONEXIO920PACKET pac;
 
 	pac = allocConexioCMM920_packet(pac, 0, 0, 0);
@@ -914,27 +1396,33 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 		return -1;
 	}
 	
-	memset(head_data, 0, sizeof(head_data)); // 2015.01.08 (2)
+	memset(head_data, 0, sizeof( BYTE ) * 4 ); // 2016.01.08 (2)
 
 	//size get
 	Serial_GetString(iPort, &head_data[0], 4 * sizeof(BYTE));
 
 	d_size = (head_data[2] * 256 + head_data[3]);
-	if( d_size < 5 ){
-		DbgPrint("<RecvCommandAck> Non Data Length \n");
-		freeConexioCMM920_packet(pac);// 2015.01.08 (1)
+	if( d_size < 5 || d_size > 512 ){
+		if (d_size < 5 )
+			DbgDataLength("<RecvCommandAck> Non Data Length \n");
+		else if( d_size > 512 )
+			DbgDataLength("<RecvCommandAck> Over Data Length \n");
+
+		freeConexioCMM920_packet(pac);// 2016.01.08 (1)
 //		free(pac);
-		return 0;
+		return -2;
 	}
 	d_size -= 5; // ヘッダサイズを引いて実データサイズを求める
 	pac->data = (BYTE*)malloc(sizeof(BYTE) * (d_size) );
 	if(pac->data == NULL)
 	{
 		DbgPrint("<RecvCommandAck> Memory allocation error\n");
-		freeConexioCMM920_packet(pac);// 2015.01.08 (1)
+		freeConexioCMM920_packet(pac);// 2016.01.08 (1)
 //		free(pac);
-		return -2;
+		return -3;
 	}
+	DbgAllocFreeCheck("<RecvCommandAck> Alloc PAC data\n");
+
 	array = pktGetBYTEArray(pac, d_size, &length);
 	//length = pktGetLength(size);
 
@@ -956,18 +1444,29 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 	pac = allocConexioCMM920_packet(pac, mode, command, 1);
 	if(pac == NULL) {
 		DbgPrint("<RecvCommandAck> Memory Null Allocate.\n");
-		return -3;
+		free(array);
+		return -4;
 	}
 	pac->data = (BYTE*)malloc(sizeof(BYTE) * (d_size) );
+	DbgAllocFreeCheck("<RecvCommandAck> Alloc PAC data( check ) \n");
 	if(pac->data == NULL)
 	{
 		DbgPrint("<RecvCommandAck> Memory allocation error\n");
+		free(array);
 		free(pac);
-		return -4;
+		return -5;
 	}
 
-	if(size != NULL) DbgPrint("<RecvCommandAck> size not NULL\n");
-	if(*size != 0) DbgPrint("<RecvCommandAck> *size not 0\n");
+	if(size != NULL){
+		DbgPrint("<RecvCommandAck> size not NULL\n");
+		if(*size != 0){
+			DbgPrint("<RecvCommandAck> *size not 0 : %d\n", *size );
+		}else{
+			DbgPrint("<RecvCommandAck> size = 0 d_size %d\n", d_size );
+		}
+	}else{
+		DbgPrint("<RecvCommandAck> size is NULL\n");
+	}
 
 	if( (size != NULL) && (*size != 0) ){
 		iRet = pktChkBYTEArray( pac, array , *size);
@@ -975,14 +1474,14 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 		iRet = pktChkBYTEArray( pac, array , d_size);
 	}
 	if( iRet ){
-		DbgPrint("<RecvCommandAck> pkt Chk Error\n");
-		// 2015.01.08 (2) start
+		DbgPrint("<RecvCommandAck> pkt Chk Error : %x\n", iRet );
+		// 2016.01.08 (2) start
 		free(array);
 		freeConexioCMM920_packet(pac);
 		//free(pac->data);
 		//free(pac);
-		// 2015.01.08 (2) end
-		return -5;
+		// 2016.01.08 (2) end
+		return -6;
 		
 	}
 	free(array);
@@ -990,11 +1489,11 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 	for( i = 0; i < d_size; i ++ ){
 		buf[i] = pac->data[i];
 	}
-	// 2015.01.08 (2) start
+	// 2016.01.08 (2) start
 	freeConexioCMM920_packet(pac);
 	//free(pac->data);
 	//free(pac);
-	// 2015.01.08 (2) end
+	// 2016.01.08 (2) end
 
 	if(size != NULL)	*size = d_size;
 
@@ -1009,6 +1508,7 @@ PCONEXIO920PACKET allocConexioCMM920_packet(PCONEXIO920PACKET pac, BYTE mode, BY
 
 	if(pac == (PCONEXIO920PACKET)NULL) return pac;
 
+	DbgAllocFreeCheck("<allocConexioCMM920_packet> Alloc PAC\n");
 	// if you send the packet, it set header and footer parameters. 
 	if( isSend ){
 		pac->dle = 0x10;
@@ -1021,15 +1521,23 @@ PCONEXIO920PACKET allocConexioCMM920_packet(PCONEXIO920PACKET pac, BYTE mode, BY
 		pac->resultCode = 0x00;
 		pac->etx = 0x03;
 	}
-
+	pac->data = (BYTE*)NULL; // 2016.01.15 (5)
 	return pac;
 }
 
 // Free memory 920MHz packet
 void freeConexioCMM920_packet(PCONEXIO920PACKET pac)
 {
-	if(pac->data != (BYTE *)NULL) free(pac->data);
-	if(pac != (PCONEXIO920PACKET)NULL ) free(pac);
+	if(pac->data != (BYTE *)NULL){
+		DbgAllocFreeCheck("<freeConexioCMM920_packet> Free PAC Data\n");
+		free(pac->data); 
+		pac->data = (BYTE *)NULL;//2016.01.15 (5)
+	}
+	if(pac != (PCONEXIO920PACKET)NULL ){
+		DbgAllocFreeCheck("<freeConexioCMM920_packet> Free PAC \n");
+		free(pac);
+		pac = (PCONEXIO920PACKET)NULL;//2016.01.15 (5)
+	}
 }
 
 // Make 920MHz packet

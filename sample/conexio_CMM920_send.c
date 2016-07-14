@@ -3,7 +3,7 @@
 /******************************************************************************/
 
 /*
--- Copyright (c) 2014 Tomoyuki Niimi
+-- Copyright (c) 2015 Tomoyuki Niimi, Syunsuke Okamoto
 
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@
 -- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
+--
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,12 +51,17 @@ int main(int argc, char **argv)
 	int sig = 0;
 	int cnt = 1;
 	int cntOK = 0, cntNG = 0;
-	int WaitTime = 1000;
 	int Antenna = 0;
 	long iCnt = 1;
 	long Retrycnt = 20;
 	int iWait = 700;
+	unsigned short myId = 0x1234;
+	unsigned short myAddr = 0x5678;
+	int leng;
+	int rxp;
+	int iHop = CONEXIO_CMM920_HOP_SINGLE;
 
+	BYTE multi64bitAddr[8]={0};
 
 	if( argc >= 1 ){
 
@@ -77,6 +83,7 @@ int main(int argc, char **argv)
 					printf(" -r[Retry Count]\n");
 					printf(" -d[Data]\n");
 					printf(" -w[Wait(ms)]\n");
+					printf(" -h[hop mode]\n");
 					printf("Usage:\n");
 					printf("Antenna type internal [0] external [1]\n");
 					printf("infinite loop [-1]\n");
@@ -106,6 +113,13 @@ int main(int argc, char **argv)
 				// Wait
 				if(strncmp(argv[i], "-w", strlen("-w")) == 0){
 					if(sscanf(argv[i], "-w%d", &iWait) != 1){
+						ret = -1;
+					}
+				}
+
+				// hop
+				if(strncmp(argv[i], "-h", strlen("-h")) == 0){
+					if(sscanf(argv[i], "-h%d", &iHop) != 1){
 						ret = -1;
 					}
 				}
@@ -165,10 +179,29 @@ int main(int argc, char **argv)
 	}
 
 	// 無線設定要求
-	(void)WirelessSettingRequest();
+//	(void)WirelessSettingRequest();
+	conexio_cmm920_set_wireless(
+				100000,	//100kbps
+				55,		//55ch
+				CONEXIO_CMM920_SET_WIRELESS_POWER_20MW,
+				-85,	//-85 dbm
+				-95,	// -95 dbm
+				130,	// 130(usec)
+				6,
+				4,		// ACK 4回
+				100		// 100(usec)
+		);
+
 
 	// 応答待ちタイマ設定要求
-	(void)TimerRequest();
+//	(void)TimerRequest();
+	conexio_cmm920_set_timer(100);
+
+	if( iHop == CONEXIO_CMM920_HOP_MULTI )
+	{
+		conexio_cmm920_set_hop_mode(iHop);
+		conexio_cmm920_set_address(myId, multi64bitAddr, myAddr);
+	}
 
 	// 動作モード要求
 	(void)RunRequest();
@@ -181,24 +214,60 @@ int main(int argc, char **argv)
 		// 電文送受信
 //		ret = (int)TelegramSend();
 
-		conexio_cmm920_data_send(
-			cMsg,
-			36,
-			CONEXIO_CMM920_HOP_SINGLE,
-			CONEXIO_CMM920_SENDDATA_MODE_NOACK_NORESP,
-			NULL
-		);
+		if(iHop == CONEXIO_CMM920_HOP_SINGLE){
+			iRet = conexio_cmm920_data_send_single(
+					cMsg,
+					36,
+					CONEXIO_CMM920_SENDDATA_MODE_NOACK_RESP,
+					NULL
+			);
+		}else{
+			iRet = conexio_cmm920_data_send_multi(
+				&cMsg[0],
+				36,
+				CONEXIO_CMM920_SENDDATA_MODE_ACK_NORESP,
+				0x1234,
+				myId,
+				0x9ABC,
+				myAddr,
+				NULL
+			);
+		}
 		usleep(iWait * 1000);
 		for( i = 0; i < Retrycnt ; i ++ ){
 			memset(&cRecv[0], 0x00, 512 * sizeof(char) );
-			conexio_cmm920_data_recv(
+			leng = 0;
+			rxp = 0;
+			if( iHop == CONEXIO_CMM920_HOP_SINGLE){
+			iRet = conexio_cmm920_data_recv(
 				&cRecv[0],
-				NULL,
+				&leng,
 				CONEXIO_CMM920_HOP_SINGLE,
 				NULL,
+				&rxp,
 				NULL
 			);
-
+			}else{
+				iRet = conexio_cmm920_data_recv_multi(
+					&cRecv[0],
+					&leng,
+					NULL,
+					NULL,
+					NULL,
+					NULL,
+					NULL,
+					NULL,
+					NULL				
+				);
+			}
+//			if( iRet == 0 && leng == 0 ){
+//			if( leng == 0 ){
+//				i--;
+//				continue;
+//			}
+			if( leng > 0 ){
+				printf("rxpower = %d \n" , rxp );
+			}
 			if( strncmp(&cRecv[0], &cMsg[0],36 ) == 0 ){
 				cntOK++;
 				printf("OK %d/%d Count\n", cntOK, cnt);
@@ -210,7 +279,7 @@ int main(int argc, char **argv)
 					printf("NG %d/%d Count\n", cntNG,cnt);
 				}
 			}
-			usleep(iWait * 1000);
+			usleep( iWait * 1000 );
 		}
 //		usleep(Looptimer);
 

@@ -1,10 +1,10 @@
-#CC = gcc #selfbuild
-CC=arm-linux-gnueabi-gcc #crossbuild
+CC = gcc #selfbuild
+#CC=arm-linux-gnueabi-gcc #crossbuild
 CFLAGS= -g -Wall
-VERSION=1.0.1
+VERSION=1.1.0
 
-#INSTALL_DIR=/usr/local/lib/
-INSTALL_DIR=/usr/arm-linux-gnueabi/lib/
+INSTALL_DIR=/usr/local/lib/
+#INSTALL_DIR=/usr/arm-linux-gnueabi/lib/
 
 all:libconexio_CMM920.o libconexio_CMM920_wrap.o libconexio_CMM920.so
 
@@ -17,12 +17,12 @@ libconexio_CMM920.so:
 
 install:
 	cp libconexio_CMM920.so.${VERSION} ${INSTALL_DIR}
-	ln -s ${INSTALL_DIR}libconexio_CMM920.so.${VERSION} ${INSTALL_DIR}libconexio_CMM920.so
+#	ln -s ${INSTALL_DIR}libconexio_CMM920.so.${VERSION} ${INSTALL_DIR}libconexio_CMM920.so
 	ldconfig
 
 uninstall:
-#	rm ${INSTALL_DIR}/libconexio_CMM920.so.*
-	rm ${INSTALL_DIR}/libconexio_CMM920.*
+	rm ${INSTALL_DIR}/libconexio_CMM920.so.*
+#	rm ${INSTALL_DIR}/libconexio_CMM920.*
 	ldconfig
 
 clean:
