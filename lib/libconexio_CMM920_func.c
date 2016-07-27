@@ -28,6 +28,7 @@
                       (2) Fixed sequence number added MHR.
                       (3) Fixed change value name , from panid to shortAddr.
                       (4) Fixed change value name,  from send_size to size.
+    update 2016.07.20 (1) Fixed Received Data divided into two.
 ***/
 
 #include <stdio.h>
@@ -1261,7 +1262,7 @@ int conexio_cmm920_data_send_single(BYTE buf[], int size, int send_mode, BYTE r_
 	BYTE antenna_mode = 0;
 
 	if( antenna_mode == CONEXIO_CMM920_SET_ANTENNA_01 ){
-		printf(KERN_WARNING"WARNING : SETTING ANTENNA MODE 1 CANNOT SEND DATA.< TELEC VIOLATION >");
+		printf("WARNING : SETTING ANTENNA MODE 1 CANNOT SEND DATA.< TELEC VIOLATION >");
 		return 1;
 	}
 
@@ -1999,6 +2000,7 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 	int i;
 	int iRet = 0;
 	int d_size = 0;
+	int readlen = 0;	// 2016.07.20
 	PCONEXIO920PACKET pac;
 
 	pac = allocConexioCMM920_packet(pac, 0, 0, 0);
@@ -2041,7 +2043,10 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 		array[i] = head_data[i];
 
 	// Get Data (without header)
-	Serial_GetString(iPort, &array[4], (length - 4) * sizeof(BYTE));
+	do {
+		readlen += Serial_GetString(iPort, &array[4+readlen], (length - 4) * sizeof(BYTE));
+		DbgPrint("Recvlen = %d\n", readlen);
+	} while (readlen < (length - 4));
 
 	DbgPrint("Recv Data = ");
 
