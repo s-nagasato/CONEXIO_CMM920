@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
-		<cconfiguration id="cdt.managedbuild.toolchain.gnu.cross.base.961874340">
-			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.toolchain.gnu.cross.base.961874340" moduleId="org.eclipse.cdt.core.settings" name="デフォルト">
+		<cconfiguration id="cdt.managedbuild.toolchain.gnu.base.24380040">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.toolchain.gnu.base.24380040" moduleId="org.eclipse.cdt.core.settings" name="デフォルト">
 				<externalSettings/>
 				<extensions>
 					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
@@ -14,19 +14,17 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration buildProperties="" id="cdt.managedbuild.toolchain.gnu.cross.base.961874340" name="デフォルト" parent="org.eclipse.cdt.build.core.emptycfg">
-					<folderInfo id="cdt.managedbuild.toolchain.gnu.cross.base.961874340.855887985" name="/" resourcePath="">
-						<toolChain id="cdt.managedbuild.toolchain.gnu.cross.base.1262536653" name="Cross GCC" superClass="cdt.managedbuild.toolchain.gnu.cross.base">
-							<option id="cdt.managedbuild.option.gnu.cross.prefix.2145740916" name="接頭部" superClass="cdt.managedbuild.option.gnu.cross.prefix"/>
-							<option id="cdt.managedbuild.option.gnu.cross.path.1417651300" name="パス" superClass="cdt.managedbuild.option.gnu.cross.path"/>
-							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.targetPlatform.gnu.cross.2006916563" isAbstract="false" osList="all" superClass="cdt.managedbuild.targetPlatform.gnu.cross"/>
-							<builder id="cdt.managedbuild.builder.gnu.cross.1209434216" managedBuildOn="false" name="Gnu Make ビルダー.デフォルト" superClass="cdt.managedbuild.builder.gnu.cross"/>
-							<tool id="cdt.managedbuild.tool.gnu.cross.c.compiler.290950890" name="Cross GCC Compiler" superClass="cdt.managedbuild.tool.gnu.cross.c.compiler"/>
-							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.compiler.2002624680" name="Cross G++ Compiler" superClass="cdt.managedbuild.tool.gnu.cross.cpp.compiler"/>
-							<tool id="cdt.managedbuild.tool.gnu.cross.c.linker.358862042" name="Cross GCC Linker" superClass="cdt.managedbuild.tool.gnu.cross.c.linker"/>
-							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.522430024" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker"/>
-							<tool id="cdt.managedbuild.tool.gnu.cross.archiver.1811798383" name="Cross GCC Archiver" superClass="cdt.managedbuild.tool.gnu.cross.archiver"/>
-							<tool id="cdt.managedbuild.tool.gnu.cross.assembler.573440410" name="Cross GCC Assembler" superClass="cdt.managedbuild.tool.gnu.cross.assembler"/>
+				<configuration buildProperties="" id="cdt.managedbuild.toolchain.gnu.base.24380040" name="デフォルト" parent="org.eclipse.cdt.build.core.emptycfg">
+					<folderInfo id="cdt.managedbuild.toolchain.gnu.base.24380040.1688873574" name="/" resourcePath="">
+						<toolChain id="cdt.managedbuild.toolchain.gnu.base.1878039055" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.base">
+							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.target.gnu.platform.base.913298549" name="デバッグ・プラットフォーム" osList="linux,hpux,aix,qnx" superClass="cdt.managedbuild.target.gnu.platform.base"/>
+							<builder id="cdt.managedbuild.target.gnu.builder.base.626302892" managedBuildOn="false" name="Gnu Make ビルダー.デフォルト" superClass="cdt.managedbuild.target.gnu.builder.base"/>
+							<tool id="cdt.managedbuild.tool.gnu.archiver.base.1115634334" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.979715146" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base"/>
+							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.2080341003" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base"/>
+							<tool id="cdt.managedbuild.tool.gnu.c.linker.base.617321756" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.base"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.base.254061047" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.base"/>
+							<tool id="cdt.managedbuild.tool.gnu.assembler.base.111314893" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.base"/>
 						</toolChain>
 					</folderInfo>
 				</configuration>
@@ -34,11 +32,11 @@
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
 	</storageModule>
-	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-		<project id="conexio_CMM920.null.1834458472" name="conexio_CMM920"/>
-	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+	</storageModule>
+	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+		<project id="conexio_cmm920.null.1497983614" name="conexio_cmm920"/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 </cproject>
