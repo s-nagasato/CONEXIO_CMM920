@@ -29,6 +29,7 @@
                       (3) Fixed change value name , from panid to shortAddr.
                       (4) Fixed change value name,  from send_size to size.
     update 2016.07.20 (1) Fixed Received Data divided into two.
+	update 2016.07.29 (1) Added Received Data Timeout Error.
 ***/
 
 #include <stdio.h>
@@ -2001,6 +2002,7 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 	int iRet = 0;
 	int d_size = 0;
 	int readlen = 0;	// 2016.07.20
+	int timeout	 = 1;	// 2016.07.29
 	PCONEXIO920PACKET pac;
 
 	pac = allocConexioCMM920_packet(pac, 0, 0, 0);
@@ -2043,10 +2045,27 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 		array[i] = head_data[i];
 
 	// Get Data (without header)
-	do {
-		readlen += Serial_GetString(iPort, &array[4+readlen], (length - 4) * sizeof(BYTE));
+	for( i = 0; i < 10; i++ ){
+		int nRead = Serial_GetString(iPort, &array[4 + readlen], (length - 4 - readlen) * sizeof(BYTE));
+
+		if(nRead > 0){
+			readlen += nRead;
+		}
+
 		DbgPrint("Recvlen = %d\n", readlen);
-	} while (readlen < (length - 4));
+
+		if( readlen >= (length - 4) ){
+			timeout = 0;
+			break;
+		}
+		msleep( 100 );
+	}
+	
+	if( timeout ){
+		DbgPrint("<RecvCommandAck> TimeOut Receive Error.\n");
+		free(array);
+		return -7;
+	}
 
 	DbgPrint("Recv Data = ");
 

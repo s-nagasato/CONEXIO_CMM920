@@ -16,7 +16,10 @@ extern int Serial_PutChar( int AiPort, unsigned char AcChar );
 extern int Serial_GetChar( int AiPort );
 extern int Serial_GetString( int AiPort, char *AsBuffer, int AiLen );
 extern int Serial_PutString( int AiPort, char *AsBuffer, int AiLen );
-
+extern int Serial_SumCheck( char *AsBuffer, int AiLen, int AiComplement );
+extern void Serial_Set_Rts( int AiPort, int AiValue );
+extern void Serial_Set_Dtr( int AiPort, int AiValue );
+extern void Serial_Get_Lsr( int AiPort, int *AiValue );
 
 
 #define Serial_PortOpen_Full( AsDev, AlSpeed, AiLength, AiStop, AiParity, AiWait, AiBlockMode) \
@@ -25,5 +28,12 @@ extern int Serial_PutString( int AiPort, char *AsBuffer, int AiLen );
 #define Serial_PortOpen( AsDev, AlSpeed, AiLength, AiStop, AiParity, AiWait, AiBlockMode) \
 	Serial_PortOpen_Func( AsDev, AlSpeed, AiLength, AiStop, AiParity, AiWait, AiBlockMode)
 
+#ifndef TIOCSRS485
+#define TIOCSRS485      0x542F
+#endif
+
+#define LSR_OE	0x02
+#define LSR_PE	0x04
+#define LSR_FE	0x08
 
 #endif /* SERIALUNC_H_ */
