@@ -44,6 +44,8 @@
 #include "libconexio_CMM920.h"
 #include "serialfunc.h"
 
+#define LIB_CONNEXIO_CMM920_VERSION "1.1.3"
+
 /*!
  @~English
  @name DebugPrint macro
@@ -239,6 +241,7 @@ int conexio_cmm920_init(char* PortName){
 	int iLength = 8;
 	int iStop = 1;
 	int iParity = 0;
+	int iRtsControl = 1; // RTS/CTS ON
 
 	iPort = Serial_PortOpen_Full(
 		PortName,
@@ -247,7 +250,8 @@ int conexio_cmm920_init(char* PortName){
 		iStop,
 		iParity,
 		100 ,
-		0
+		0,
+		iRtsControl
 	);
 
 	if(iPort < 0){
@@ -2270,4 +2274,19 @@ BYTE* pktGetBYTEArray( PCONEXIO920PACKET pac, int size , int *retSize)
 	freeConexioCMM920_packet(pac);
 
 	return retArray;
+}
+
+
+/**
+	@~English
+	@brief CONEXIO 920MHz Library Get Version
+	@param libVer : Library Version
+	@~Japanese
+	@brief CONEXIO 920MHz　Module ライブラリのバージョンを取得します
+	@param libVer   ライブラリのバージョン
+**/
+void conexio_cmm920_get_lib_version( char *libVer ){
+
+	strcpy(libVer,LIB_CONNEXIO_CMM920_VERSION);
+
 }
