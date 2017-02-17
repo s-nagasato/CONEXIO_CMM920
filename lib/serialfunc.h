@@ -20,6 +20,9 @@ extern int Serial_SumCheck( char *AsBuffer, int AiLen, int AiComplement );
 extern void Serial_Set_Rts( int AiPort, int AiValue );
 extern void Serial_Set_Dtr( int AiPort, int AiValue );
 extern void Serial_Get_Lsr( int AiPort, int *AiValue );
+extern int Serial_Get_Ri( int AiPort );
+extern int Serial_Get_Dcd( int AiPort );
+extern int Serial_Get_Dsr( int AiPort );
 
 extern void Serial_Get_In_Buffer( int AiPort, int *AiValue );
 extern void Serial_Get_Out_Buffer( int AiPort, int *AiValue );

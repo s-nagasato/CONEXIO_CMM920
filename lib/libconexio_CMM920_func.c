@@ -41,10 +41,13 @@
 #include <sys/ioctl.h>
 #include <time.h>
 #include <sys/time.h>
+#include <syslog.h>
 #include "libconexio_CMM920.h"
 #include "serialfunc.h"
 
-#define LIB_CONNEXIO_CMM920_VERSION "1.1.3"
+#define LIB_CONNEXIO_CMM920_VERSION "1.1.4"
+#define LIB_CONNEXIO_SYSLOG_NAME "libconnexio_CMM920"
+
 
 /*!
  @~English
@@ -180,6 +183,50 @@ int _conexio_cmm920_Hex2dBm( BYTE hex ){
 	return dBm;
 }
 
+
+/**
+	@~English
+	@brief 920 Module syslog
+	@param msg :
+	@~Japanese
+	@brief 920MHzモジュール syslog
+	@param msg :
+**/
+void _conexio_cmm920_output_syslog( int level, char *msg )
+{
+//	openlog(LIB_CONNEXIO_SYSLOG_NAME, LOG_PERROR|LOG_PID,LOG_USER);
+	openlog(LIB_CONNEXIO_SYSLOG_NAME, LOG_PERROR|LOG_PID,LOG_LOCAL0);
+	syslog(level,"%s\n",msg);
+	closelog();
+}
+
+/**
+	@~English
+	@brief 920 Module syslog
+	@param msg :
+	@~Japanese
+	@brief 920MHzモジュール syslog info
+	@param msg :
+**/
+void _conexio_cmm920_output_syslog_info( char *msg )
+{
+	_conexio_cmm920_output_syslog(LOG_INFO, msg);
+}
+
+/**
+	@~English
+	@brief 920 Module syslog
+	@param msg :
+	@~Japanese
+	@brief 920MHzモジュール syslog info
+	@param msg :
+**/
+void _conexio_cmm920_output_syslog_notice( char *msg )
+{
+	_conexio_cmm920_output_syslog(LOG_NOTICE, msg);
+}
+
+
 /**
 	@~English
 	@brief 920 Module send and Ack receive
@@ -249,7 +296,7 @@ int conexio_cmm920_init(char* PortName){
 		iLength,
 		iStop,
 		iParity,
-		100 ,
+		10,
 		0,
 		iRtsControl
 	);
@@ -1645,7 +1692,7 @@ int SendTelegram(BYTE buf[], int size, int hop, int send_mode, unsigned short *d
 	int i, ret;
 	int offset = 0;
 	unsigned short fc = 0;
-
+	BYTE syslog_string[256];
 
 	if( hop == CONEXIO_CMM920_HOP_MULTI ){
 		offset = calcMHR(
@@ -1682,6 +1729,40 @@ int SendTelegram(BYTE buf[], int size, int hop, int send_mode, unsigned short *d
 	for( i = 0; i < size ; i ++ ){
 		pktBuf[3 + offset + i] = buf[i];
 	}
+
+	memset(&syslog_string[0], 0x00, 256);//Clear
+	sprintf(syslog_string,"[Send Teregram Application Buffer SIZE:%d] ", size);
+	for( i = 0; i < pktSize ; i ++ ){
+
+		if( (i % 65) == 0 ){ // 1行 207byte (69)以降切れるため
+			_conexio_cmm920_output_syslog_notice( syslog_string );
+			memset(&syslog_string[0], 0x00, 256 );
+		}
+
+		sprintf(syslog_string,"%s%02X ",syslog_string, buf[i]);
+	}
+	_conexio_cmm920_output_syslog_notice( syslog_string );
+	memset(&syslog_string[0],0x00, 256); //Clear
+	for( i = 0; i < pktSize ; i ++ ){
+		if( (i % 65) == 0 && i != 0){ // 1行 207byte (69)以降切れるため
+			_conexio_cmm920_output_syslog_notice( syslog_string );
+			memset(&syslog_string[0], 0x00, 256 );
+		}
+		sprintf(syslog_string,"%s%02X ",syslog_string, pktBuf[i]);
+	}
+	_conexio_cmm920_output_syslog_notice( syslog_string );
+
+	sprintf(syslog_string,"[Send Teregram Packet SIZE:%d] ", pktSize);
+	for( i = 0; i < pktSize ; i ++ ){
+
+		if( (i % 65) == 0 ){ // 1行 207byte (69)以降切れるため
+			_conexio_cmm920_output_syslog_notice( syslog_string );
+			memset(&syslog_string[0], 0x00, 256 );
+		}
+
+		sprintf(syslog_string,"%s%02X ",syslog_string, pktBuf[i]);
+	}
+	_conexio_cmm920_output_syslog_notice( syslog_string );
 
 	ret = (int)SendCommand(pktBuf, pktSize, CONEXIO_CMM920_MODE_RUN, CONEXIO_CMM920_SENDDATA);
 
@@ -1858,6 +1939,9 @@ int SendCommand(BYTE buf[], int size, BYTE mode, BYTE command )
 	int length = 0;
 	int i;
 	PCONEXIO920PACKET pac;
+	BYTE syslog_string[256];
+
+	memset(&syslog_string[0], 0x00, 256 );
 
 	pac = allocConexioCMM920_packet(pac, mode, command, 1);
 
@@ -1886,12 +1970,24 @@ int SendCommand(BYTE buf[], int size, BYTE mode, BYTE command )
 
 	DbgPrint("Send Data = ");
 
+	sprintf(syslog_string,"[Sending Data] ");
+
 	for (i = 0; i < length; i++)
 	{
+
+		if( (i % 65) == 0 ){ // 1行 207byte (69)以降切れるため
+			_conexio_cmm920_output_syslog_notice( syslog_string );
+			memset(&syslog_string[0], 0x00, 256 );
+		}
+
+		sprintf(syslog_string,"%s%02X ",syslog_string, array[i]);
 		DbgPrint("%02X", array[i]);
+
 	}
 
 	DbgPrint("\n");
+
+	_conexio_cmm920_output_syslog_notice( syslog_string );
 
 	// mallocで取得したメモリを解放する
 	free(array);
@@ -2008,6 +2104,9 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 	int readlen = 0;	// 2016.07.20
 	int timeout	 = 1;	// 2016.07.29
 	PCONEXIO920PACKET pac;
+	BYTE syslog_string[256];
+
+	memset(&syslog_string[0], 0x00, 256 );
 
 	pac = allocConexioCMM920_packet(pac, 0, 0, 0);
 	if(pac == NULL){
@@ -2062,7 +2161,7 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 			timeout = 0;
 			break;
 		}
-		msleep( 100 );
+		usleep( 100 * 1000 );
 	}
 	
 	if( timeout ){
@@ -2073,12 +2172,23 @@ int RecvCommandAck( BYTE *buf, int *size , BYTE mode, BYTE command )
 
 	DbgPrint("Recv Data = ");
 
+	sprintf(syslog_string,"[Receive Data] ");
 	for (i = 0; i < length; i++)
 	{
+
+		if( (i % 65) == 0 ){ // 1行 207byte (69)以降切れるため
+			_conexio_cmm920_output_syslog_notice( syslog_string );
+			memset(&syslog_string[0], 0x00, 256 );
+		}
+
+		sprintf(syslog_string,"%s%02X ",syslog_string, array[i]);
 		DbgPrint("%02X", array[i]);
 	}
 
 	DbgPrint("\n");
+
+	_conexio_cmm920_output_syslog_notice( syslog_string );
+
 
 	pac = allocConexioCMM920_packet(pac, mode, command, 1);
 	if(pac == NULL) {

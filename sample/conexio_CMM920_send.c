@@ -37,7 +37,7 @@
 #include "libconexio_CMM920.h"
 #include "conexio_cmm920.h"
 
-#define APP_VERSION "1.0.0"
+#define APP_VERSION "1.1.1"
 
 int main(int argc, char **argv)
 {
@@ -63,11 +63,11 @@ int main(int argc, char **argv)
 
 	BYTE multi64bitAddr[8]={0};
 
-	if( argc >= 1 ){
+	if( argc >= 2 ){
 
 		strcpy( DevName, argv[1] ); 
 
-		if( argc >= 2 ){
+		if( argc >= 3 ){
 
 			// 引数解析
 			while(i < argc){
