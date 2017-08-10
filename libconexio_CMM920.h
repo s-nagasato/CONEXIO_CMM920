@@ -81,6 +81,20 @@ typedef unsigned long DWORD,*LPDWORD;
 #define CONEXIO_CMM920_LSIADDRESS_FILTER_D_ADDR	( 0x00001011 )	///< LSI Address D Address Filter
 #define CONEXIO_CMM920_LSIADDRESS_SFD(n)	( 0x000106F0 + (n * 0x100) )	///< LSI Address SFD
 
+//2017.08.10
+#define CONEXIO_CMM920_LSITX_WAIT_LEN	( 0x000100FC )	///< LSI tx wait len
+#define CONEXIO_CMM920_LSIPREPAT	( 0x00010066 )	///< LSI prepat
+#define CONEXIO_CMM920_LSIPHR_MSB	( 0x00010044 )	///< LSI phr_msb
+#define CONEXIO_CMM920_LSICODING	( 0x00010010 )	///< LSI coding
+#define CONEXIO_CMM920_LSIPRELEN	( 0x000105F8 )	///< LSI prelen
+#define CONEXIO_CMM920_LSIWHITENING_SEED	( 0x00010570 )	///< LSI whitening seed
+#define CONEXIO_CMM920_LSISYNC_DELAY	( 0x000108F8 )	///< LSI sync delay
+#define CONEXIO_CMM920_LSISFD_TIMEOUT	( 0x00010870 )	///< LSI sfd timeout
+#define CONEXIO_CMM920_LSISYNC_CORR_TH	( 0x000109EC )	///< LSI sync corr th
+#define CONEXIO_CMM920_LSIRESYNC_TH	( 0x000109A9 )	///< LSI resync th
+#define CONEXIO_CMM920_LSISYNC_ALWAYS_EN	( 0x00010988 )	///< LSI sync always en
+#define CONEXIO_CMM920_LSIDETECT_PERIOD	( 0x00010930 )	///< LSI detect period
+
 #define CONEXIO_CMM920_SFD_MULTIHOP		( 0x7209 )	///< SFD MultiHop
 #define CONEXIO_CMM920_PRELEN_MULTIHOP	( 0x0C )	///< Preamble Length MultiHop
 

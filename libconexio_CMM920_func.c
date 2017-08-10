@@ -1166,30 +1166,31 @@ int conexio_cmm920_lsi_d_panid_filter( int isWrite, BYTE isEnable )
 	return iRet;
 }
 
+//2017.08.10
 /**
-	@~English
-	@brief CONEXIO 920MHz Module D Address Filter function
+		@~English
+	@brief CONEXIO 920MHz Module TX WAIT LEN function
 	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
 	@param isEnable : 1.Enable 0.Disable
 	@return Success : 0 , Failed : From -1 to -15 : Parameter Error, From -16 to -31 Send Error, less than -32 : Receive Error
 	@~Japanese
-	@brief CONEXIO 920MHz　Module のD Address ID フィルタ 関数
+	@brief CONEXIO 920MHz　Module のTX WAIT LEN関数
 	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
 	@param isEnable : 1.可能  0. 不可能
 	@return 成功:  0 失敗 :  送信 エラー:  -1～-15 -16～-31,　受信エラー : -32～
 **/
-int conexio_cmm920_lsi_d_address_filter( int isWrite, BYTE isEnable )
+int conexio_cmm920_lsi_tx_wait_len( int isWrite, BYTE isEnable )
 {
 	unsigned long lsi_addr;
 	unsigned short value;
 	int iRet;
 
 	if( isEnable > 1 ){
-		DbgPrint("<conexio_cmm920_lsi_d_address_filter>:Parameter Error : %x\n", iRet );
+		DbgPrint("<conexio_cmm920_lsi_tx_wait_len>:Parameter Error : %x\n", iRet );
 		return -1;
 	}
 
-	lsi_addr = CONEXIO_CMM920_LSIADDRESS_FILTER_D_ADDR;
+	lsi_addr = CONEXIO_CMM920_LSITX_WAIT_LEN;
 	value = (unsigned short) isEnable;
 
 	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
@@ -1199,11 +1200,456 @@ int conexio_cmm920_lsi_d_address_filter( int isWrite, BYTE isEnable )
 			isEnable = (BYTE)value;
 		}
 	}else{
-		DbgPrint("<conexio_cmm920_lsi_d_address_filter>:Error : %x\n", iRet );
+		DbgPrint("<conexio_cmm920_lsi_tx_wait_len>:Parameter Error : %x\n", iRet );
 	}
 
 	return iRet;
 }
+//2017.08.10
+/**
+	@~English
+	@brief CONEXIO 920MHz Module PREPAT function
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.Enable 0.Disable
+	@return Success : 0 , Failed : From -1 to -15 : Parameter Error, From -16 to -31 Send Error, less than -32 : Receive Error
+	@~Japanese
+	@brief CONEXIO 920MHz　Module のPREPAT関数
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.可能  0. 不可能
+	@return 成功:  0 失敗 :  送信 エラー:  -1～-15 -16～-31,　受信エラー : -32～
+**/
+int conexio_cmm920_lsi_prepat( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_prepat>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSIPREPAT;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_prepat>:Parameter Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+
+//2017.08.10
+/**
+	@~English
+	@brief CONEXIO 920MHz Module PHR MSB function
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.Enable 0.Disable
+	@return Success : 0 , Failed : From -1 to -15 : Parameter Error, From -16 to -31 Send Error, less than -32 : Receive Error
+	@~Japanese
+	@brief CONEXIO 920MHz　Module のPHR MSB関数
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.可能  0. 不可能
+	@return 成功:  0 失敗 :  送信 エラー:  -1～-15 -16～-31,　受信エラー : -32～
+**/
+int conexio_cmm920_lsi_phr_msb( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_phr_msb>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSIPHR_MSB;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_phr_msb>:Parameter Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+
+//2017.08.10
+/**
+	@~English
+	@brief CONEXIO 920MHz Module CODING function
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.Enable 0.Disable
+	@return Success : 0 , Failed : From -1 to -15 : Parameter Error, From -16 to -31 Send Error, less than -32 : Receive Error
+	@~Japanese
+	@brief CONEXIO 920MHz　Module のCODING関数
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.可能  0. 不可能
+	@return 成功:  0 失敗 :  送信 エラー:  -1～-15 -16～-31,　受信エラー : -32～
+**/
+int conexio_cmm920_lsi_coding( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_coding>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSICODING;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_coding>:Parameter Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+
+//2017.08.10
+/**
+	@~English
+	@brief CONEXIO 920MHz Module PRELEN function
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.Enable 0.Disable
+	@return Success : 0 , Failed : From -1 to -15 : Parameter Error, From -16 to -31 Send Error, less than -32 : Receive Error
+	@~Japanese
+	@brief CONEXIO 920MHz　Module のPRELEN関数
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.可能  0. 不可能
+	@return 成功:  0 失敗 :  送信 エラー:  -1～-15 -16～-31,　受信エラー : -32～
+**/
+int conexio_cmm920_lsi_prelen( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_prelen>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSIPRELEN;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_prelen>:Parameter Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+
+//2017.08.10
+/**
+	@~English
+	@brief CONEXIO 920MHz Module WHITENING SEED function
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.Enable 0.Disable
+	@return Success : 0 , Failed : From -1 to -15 : Parameter Error, From -16 to -31 Send Error, less than -32 : Receive Error
+	@~Japanese
+	@brief CONEXIO 920MHz　Module のWHITENING SEED関数
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.可能  0. 不可能
+	@return 成功:  0 失敗 :  送信 エラー:  -1～-15 -16～-31,　受信エラー : -32～
+**/
+int conexio_cmm920_lsi_whitening_seed( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_whitening_seed>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSIWHITENING_SEED;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_whitening_seed>:Parameter Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+
+//2017.08.10
+/**
+	@~English
+	@brief CONEXIO 920MHz Module SYNC DELAY function
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.Enable 0.Disable
+	@return Success : 0 , Failed : From -1 to -15 : Parameter Error, From -16 to -31 Send Error, less than -32 : Receive Error
+	@~Japanese
+	@brief CONEXIO 920MHz　Module のSYNC DELAY関数
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.可能  0. 不可能
+	@return 成功:  0 失敗 :  送信 エラー:  -1～-15 -16～-31,　受信エラー : -32～
+**/
+int conexio_cmm920_lsi_sync_delay( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_sync_delay>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSISYNC_DELAY;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_sync_delay>:Parameter Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+
+//2017.08.10
+/**
+	@~English
+	@brief CONEXIO 920MHz Module SFD TIMEOUT function
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.Enable 0.Disable
+	@return Success : 0 , Failed : From -1 to -15 : Parameter Error, From -16 to -31 Send Error, less than -32 : Receive Error
+	@~Japanese
+	@brief CONEXIO 920MHz　Module のSFD TIMEOUT関数
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.可能  0. 不可能
+	@return 成功:  0 失敗 :  送信 エラー:  -1～-15 -16～-31,　受信エラー : -32～
+**/
+int conexio_cmm920_lsi_sfd_timeout( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_sfd_timeout>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSISFD_TIMEOUT;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_sfd_timeout>:Parameter Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+
+//2017.08.10
+/**
+	@~English
+	@brief CONEXIO 920MHz Module SYNC CORR TH function
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.Enable 0.Disable
+	@return Success : 0 , Failed : From -1 to -15 : Parameter Error, From -16 to -31 Send Error, less than -32 : Receive Error
+	@~Japanese
+	@brief CONEXIO 920MHz　Module のSYNC CORR TH関数
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.可能  0. 不可能
+	@return 成功:  0 失敗 :  送信 エラー:  -1～-15 -16～-31,　受信エラー : -32～
+**/
+int conexio_cmm920_lsi_sync_corr_th( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_sync_corr_th>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSISYNC_CORR_TH;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_sync_corr_th>:Parameter Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+
+//2017.08.10
+/**
+	@~English
+	@brief CONEXIO 920MHz Module RESYNC TH function
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.Enable 0.Disable
+	@return Success : 0 , Failed : From -1 to -15 : Parameter Error, From -16 to -31 Send Error, less than -32 : Receive Error
+	@~Japanese
+	@brief CONEXIO 920MHz　Module のRESYNC TH関数
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.可能  0. 不可能
+	@return 成功:  0 失敗 :  送信 エラー:  -1～-15 -16～-31,　受信エラー : -32～
+**/
+int conexio_cmm920_lsi_resync_th( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_resync_th>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSIRESYNC_TH;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_resync_th>:Parameter Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+
+//2017.08.10
+/**
+	@~English
+	@brief CONEXIO 920MHz Module SYNC ALWAYS EN function
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.Enable 0.Disable
+	@return Success : 0 , Failed : From -1 to -15 : Parameter Error, From -16 to -31 Send Error, less than -32 : Receive Error
+	@~Japanese
+	@brief CONEXIO 920MHz　Module のSYNC ALWAYS EN関数
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.可能  0. 不可能
+	@return 成功:  0 失敗 :  送信 エラー:  -1～-15 -16～-31,　受信エラー : -32～
+**/
+int conexio_cmm920_lsi_sync_always_en( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_sync_always_en>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSISYNC_ALWAYS_EN;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_sync_always_en>:Parameter Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+
+//2017.08.10
+/**
+	@~English
+	@brief CONEXIO 920MHz Module DETECT PERIOD function
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.Enable 0.Disable
+	@return Success : 0 , Failed : From -1 to -15 : Parameter Error, From -16 to -31 Send Error, less than -32 : Receive Error
+	@~Japanese
+	@brief CONEXIO 920MHz　Module のDETECT PERIOD関数
+	@param isWrite : CONEXIO_CMM920_SET_READING_READ or CONEXIO_CMM920_SET_READING_WRITE
+	@param isEnable : 1.可能  0. 不可能
+	@return 成功:  0 失敗 :  送信 エラー:  -1～-15 -16～-31,　受信エラー : -32～
+**/
+int conexio_cmm920_lsi_detect_period( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_detect_period>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSIDETECT_PERIOD;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_detect_period>:Parameter Error : %x\n", iRet );
+	}
+
+	return iRet;
+}
+
+
+
+
+
+
 
 /**
 	@~English
@@ -1238,6 +1684,33 @@ int conexio_cmm920_lsi_data_sfd( int isWrite, unsigned short address, BYTE sfd_n
 		DbgPrint("<conexio_cmm920_lsi_data_sfd>:Error : %x\n", iRet );
 	}
 	
+	return iRet;
+}
+
+int conexio_cmm920_lsi_d_address_filter( int isWrite, BYTE isEnable )
+{
+	unsigned long lsi_addr;
+	unsigned short value;
+	int iRet;
+
+	if( isEnable > 1 ){
+		DbgPrint("<conexio_cmm920_lsi_d_address_filter>:Parameter Error : %x\n", iRet );
+		return -1;
+	}
+
+	lsi_addr = CONEXIO_CMM920_LSIADDRESS_FILTER_D_ADDR;
+	value = (unsigned short) isEnable;
+
+	iRet = conexio_cmm920_lsi( lsi_addr, isWrite, &value );
+
+	if( !iRet ){
+		if( isWrite == CONEXIO_CMM920_SET_READING_READ ){
+			isEnable = (BYTE)value;
+		}
+	}else{
+		DbgPrint("<conexio_cmm920_lsi_d_address_filter>:Error : %x\n", iRet );
+	}
+
 	return iRet;
 }
 

@@ -400,6 +400,10 @@ void conexio_cmm920_set_hop_mode( BYTE hop )
 				//CONEXIO_CMM920_SET_ENABLE
 				CONEXIO_CMM920_SET_DISABLE	// 2016.01.15 (1) 
 		);
+		conexio_cmm920_lsi_tx_wait_len( // 2017.08.10
+				CONEXIO_CMM920_SET_READING_WRITE,
+				CONEXIO_CMM920_SET_ENABLE
+		);
 
 	}else{
 		conexio_cmm920_reset();
